@@ -1,5 +1,5 @@
 """
-A catch-all file that imports the while framework.
+A catch-all file that imports the whole framework.
 
 :file: __init__.py
 :date: 27/08/2015
