@@ -49,7 +49,7 @@ SIGNED_HYDRA_TYPES = {
 }
 
 
-def extract_structs(node):
+def extract_type(node, cursor_kind):
     """ Extract recursively the structs from a given source node. """
     if node is None:
         return []
@@ -57,12 +57,21 @@ def extract_structs(node):
     children = node.get_children()
     structs = []
     for child in children:
-        if child.kind == CursorKind.STRUCT_DECL:
+        if child.kind == cursor_kind:
             structs.append(child)
 
         structs += extract_structs(child)
 
     return structs
+
+
+def extract_structs(node):
+    """ Extract recursively the structs from a given source node. """
+    return extract_type(node, CursorKind.STRUCT_DECL)
+
+
+def extract_enums(node):
+    return extract_type(node, CursorKind.ENUM_DECL)
 
 
 def resolve_type(field_type, struct_types, raw_type=False):
@@ -88,9 +97,13 @@ def resolve_type(field_type, struct_types, raw_type=False):
 
     # Floating types.
     if field_type.kind == TypeKind.FLOAT:
-        return HYDRA_FLOAT + '()'
+        return template % HYDRA_FLOAT
     elif field_type.kind == TypeKind.DOUBLE:
-        return HYDRA_DOUBLE + '()'
+        return template % HYDRA_DOUBLE
+
+    if field_type.kind == TypeKind.ENUM:
+        enum_type = struct_types[field_type.spelling]
+        return template % enum_type.type_name
 
     if raw_type:
         template = '%s'
@@ -101,6 +114,7 @@ def resolve_type(field_type, struct_types, raw_type=False):
     if field_type.kind == TypeKind.RECORD:
         struct_type = struct_types[field_type.spelling]
         return template % struct_type.type_name
+
 
     if field_type.kind == TypeKind.CONSTANTARRAY:
         element_type = resolve_type(field_type.get_array_element_type(), struct_types, raw_type=True)
@@ -136,21 +150,46 @@ class StructType(object):
         output.write('\n\n')
 
 
+class EnumType(object):
+
+    def __init__(self, cursor):
+        self.cursor = cursor
+        self.type = cursor.enum_type
+        self.type_name = cursor.spelling
+
+        self.literals = collections.OrderedDict()
+        for literal in self.cursor.get_children():
+            self.literals[literal.spelling] = literal.enum_value
+
+    def format(self, types, output):
+        output.write('class %s(EnumClass):\n' % self.type_name)
+
+        if self.cursor.brief_comment is not None:
+            output.write('\t""" %s """\n\n' % self.cursor.brief_comment)
+
+        for n, l in self.literals.items():
+            output.write('\t%s = Literal(%d)\n' % (n, l))
+
+        output.write('\n\n')
+
+
 class ParsedTranslationUnit(object):
     """ A class holding the data of one translation unit (e.g. *.cpp file)."""
 
     def __init__(self, file_name):
         index = Index.create()
         tu = index.parse(file_name)
-        structs = extract_structs(tu.cursor)
 
         self.types = collections.OrderedDict()
-        for s in structs:
+        for e in extract_enums(tu.cursor):
+            self.types[e.type.spelling] = EnumType(e)
+
+        for s in extract_structs(tu.cursor):
             self.types[s.type.spelling] = StructType(s)
 
     def dump(self, output=sys.stdout):
-        for struct_type in self.types.values():
-            struct_type.format(self.types, output)
+        for c_type in self.types.values():
+            c_type.format(self.types, output)
 
 
 if __name__ == '__main__':
