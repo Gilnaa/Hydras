@@ -3,6 +3,7 @@
 import unittest
 
 from EnumTests import *
+from EnumClassTests import *
 from OffsetTests import *
 from Python3Tests import *
 from ScalarsTests import *

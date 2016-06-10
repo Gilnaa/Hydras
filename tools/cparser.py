@@ -155,4 +155,3 @@ class ParsedTranslationUnit(object):
 
 if __name__ == '__main__':
     ParsedTranslationUnit(sys.argv[1]).dump()
-    

@@ -14,6 +14,7 @@ from .base import *
 from .scalars import *
 from .vectors import *
 from .enums import *
+from .enum_class import *
 
 # Misc.
 from .validators import *

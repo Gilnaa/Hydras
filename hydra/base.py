@@ -36,6 +36,15 @@ class HydraSettings(object):
     # Determines whether the size of the bitfield's fields will be enforced.
     enforce_bitfield_size = True
 
+    # Determines whether parsed enum literals have to be part of the enum.
+    strong_enum_literals = True
+
+    # When True, renders enum values as integers instead of strings.
+    render_enums_as_integers = False
+
+    # When True and `render_enums_as_integers == False`, renders enum literals as "EnumName.LiteralName"
+    full_enum_names = True
+
     __snapshot_stack__ = []
 
     @classmethod
@@ -131,9 +140,9 @@ class TypeFormatter(object):
         """ Determines whether the given two values are equal. """
         return a == b
 
-    def render(self, value):
+    def render(self, value, name):
         """ Returns a displayable string for the given value. """
-        return repr(value)
+        return '%s: %s' % (name, value)
 
     def __len__(self):
         """ Returns the length (byte size) of the formatter's type. """
@@ -319,14 +328,14 @@ class Struct(object):
     def __repr__(self):
         """ Create a string representation of the struct's data. """
         def indent_text(text):
-            lines = ['\t' + line for line in text.split('\n')]
+            lines = ['    ' + line for line in text.split('\n')]
             return '\n'.join(lines)
 
         fields = self.get_struct_fields()
         output = ''
         for name, formatter in fields:
-            field_string = formatter.render(vars(self)[name])
+            field_string = formatter.render(vars(self)[name], name)
             field_string = indent_text(field_string)
-            output += '%s :=\n%s\n' % (name, field_string)
+            output += '%s\n' % field_string
 
         return '{\n%s\n}' % indent_text(output)
