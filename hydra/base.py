@@ -110,7 +110,7 @@ class TypeFormatter(object):
 
     def resolve_settings(self, overrides=None):
         """ Resolves the flat settings for a single action on this formatter. """
-        return HydraSettings.resolve(self.settings, overrides)
+        return HydraSettings.resolve(overrides, self.settings)
 
     def format(self, value, settings=None):
         """ When implemented in derived classes, returns the byte representation of the give value. """
@@ -335,7 +335,7 @@ class Struct(object):
         output = ''
         for name, formatter in fields:
             field_string = formatter.render(vars(self)[name], name)
-            field_string = indent_text(field_string)
-            output += '%s\n' % field_string
+            output += '%s\n' % indent_text(field_string)
 
+        output = output.strip('\n')
         return '{\n%s\n}' % indent_text(output)

@@ -115,7 +115,6 @@ def resolve_type(field_type, struct_types, raw_type=False):
         struct_type = struct_types[field_type.spelling]
         return template % struct_type.type_name
 
-
     if field_type.kind == TypeKind.CONSTANTARRAY:
         element_type = resolve_type(field_type.get_array_element_type(), struct_types, raw_type=True)
         element_count = field_type.get_array_size()
