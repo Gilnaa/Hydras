@@ -9,6 +9,7 @@ from Python3Tests import *
 from ScalarsTests import *
 from StructTests import *
 from VectorTests import *
+from SettingsTests import *
 
 if __name__ == '__main__':
     unittest.main()
