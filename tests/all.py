@@ -10,6 +10,7 @@ from ScalarsTests import *
 from StructTests import *
 from VectorTests import *
 from SettingsTests import *
+from BitFieldTests import *
 
 if __name__ == '__main__':
     unittest.main()
