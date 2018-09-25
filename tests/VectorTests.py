@@ -1,17 +1,27 @@
 #!/usr/bin/env python
+"""
+Contains tests for type formatters from the `vectors.py` module.
 
+:file: VectorTests.py
+:date: 29/08/2015
+:authors:
+    - Gilad Naaman <gilad.naaman@gmail.com>
+"""
 from hydra import *
 import unittest
 
 
 class ThatStruct(Struct):
+    """ A simple `Struct`. """
 
-    data = uint16_t(0x55AA)
-    indicator = uint8_t(0xFA)
+    data = UInt16(0x55AA)
+    indicator = UInt8(0xFA)
     alignment = Pad()
 
 
 class VectorTests(unittest.TestCase):
+    """ A testcase for testing types from the `vectors.py` module. """
+
     def setUp(self):
         HydraSettings.push()
         HydraSettings.endian = LittleEndian
@@ -19,30 +29,31 @@ class VectorTests(unittest.TestCase):
     def tearDown(self):
         HydraSettings.pop()
 
-    def test_array_default_type(self):
-        array = Array(3)
-
+    def test_typed_array_default_type(self):
+        """ Test the TypedArray's default item type. """
+        array = TypedArray(3)
         self.assertEqual(array.format([0] * 3), b'\x00\x00\x00')
-        self.assertEqual(array.format([1] * 5), b'\x01\x01\x01')
-        self.assertEqual(array.format([2] * 2), b'\x02\x02\x00')
-        self.assertEqual(array.format([1, 2, 3]), b'\x01\x02\x03')
 
-        self.assertEqual(array.parse('\x00\x00\x00'), [0, 0, 0])
-
-    def test_array_custom_type(self):
-        array = Array(2, uint16_t)
+    def test_typed_array_non_default_type(self):
+        """ Test the TypeArray using a scalar value other than the default. """
+        array = TypedArray(2, UInt16)
         data = [0xDEAF, 0xCAFE]
         self.assertEqual(array.format(data), b'\xAF\xDE\xFE\xCA')
-        self.assertEqual(array.format(data, {'endian': BigEndian}), b'\xDE\xAF\xCA\xFE')
 
+    def test_typed_array_big_endian(self):
+        """ Test the TypedArray with a multi-byte type in BigEndian. """
+        array = TypedArray(3, Int16)
         HydraSettings.endian = BigEndian
-        array = Array(3, int16_t)
+
         data = [-2, 100, 200]
         self.assertEqual(array.format(data), b'\xFF\xFE\x00\x64\x00\xC8')
 
-    def test_struct_array(self):
-        array = Array(2, ThatStruct)
-        data = [ThatStruct(indicator=0), ThatStruct()]
+    def test_nested_struct_array(self):
+        """ Test the TypedArray with a Struct type. """
+        array = TypedArray(2, ThatStruct)
+        data = [ThatStruct(), ThatStruct()]
+        data[0].indicator = 0
+
         self.assertEqual(array.format(data), b'\xAA\x55\x00\x00\xAA\x55\xFA\x00')
 
 

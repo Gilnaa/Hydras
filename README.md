@@ -1,113 +1,137 @@
 # Hydra #
+'*Hydra*' is a python library that allows the developer to create structured binary data according to simple rules,
+somewhat similar to how C does it with a struct.
 
-`Hydra` is python framework that aims to simplify construction of complicated binary data.
 
-## Usage ##
-
-Example usage:
+## Example ##
 ```python
-from hydra import *
-
-MAX_SIZE = 128
-
 class Header(Struct):
-    opcode = Enum('Invalid', {'Invalid': 0, 'Data': 1})
-    payload_length = uint32_t(0)
+  Opcode = UInt8(4)       # The `opcode`'s default value will now be `4`
+  DataLength = UInt32()
 
-class DataMessage(Struct):
-    header = NestedStruct(Header(opcode = 'Data'))
-    payload = Array(MAX_SIZE)
+class DataPacket(Struct):
+  # A nested structure. "DataLength = 128" sets the default DataLength value for `Header`s inside `DataPacket`s
+  Header = NestedStruct(Header(DataLength = 128))
+  # Creates an array of bytes with a length of 128 bytes.
+  Payload = Array(length = 128)
 
+  # To override the constructor it must be able to override the default ctor (1 argument)
+  def __init__(self, opcode=0):
+    # Must call the base ctor
+    super(DataPacket, self).__init__()
+    self.Header.Opcode = opcode
 
-msg = DataMessage()
-msg.payload = 'Hello Hydra!'
-msg.header.payload_length = len(msg.payload)
+if __name__ == '__main__':
+  packet = DataPacket()
+  # After you create the object, you can ignore the formatting rules, and assign the data directly to the properties.
+  packet.Header.Opcode = DATAPACKET_OPCODE
 
-# Struct serialization
-data = msg.serialize() # => '\x01\x00\x00\x00\x0c\x00\x00\x00Hello Hydra!\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00 . . .'
+  # You can transform the object into a byte string using the `serialize` method.
+  data_to_send = packet.serialize() # => b'\x04\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00...'
+  some_socket.send(data_to_send)
 
-another_message = DataMessage.deserialize(data)
+  packet.Payload = '\xFF' * 128
+  data_to_send = packet.serialize() # => b'\x04\x80\x00\x00\x00\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF...'
 
-print(another_message == msg)
+  # . . .
+
+  # You can parse raw byte strings into an object using the deserialize class method.
+  received_data = some_socket.recv(len(packet))
+  parsed_packet = DataPacket.deserialize(received_data)
 ```
 
-## Available types ##
- - Scalars:
-    - Unsigned: `UInt8`, `UInt16`, `UInt32`, `UInt64`
-    - Signed: `Int8`, `Int16`, `Int32`, `Int64`
-    - Floating point: `Float`, `Double`
-    - `Enum`
- - Complex:
-    - `Array` (of either a scalar type or of a struct)
-    - `NestedStruct`
+You can find more examples in the examples directory.
 
-A set of aliases is supplied to the scalar set, that looks a bit more like the `stdint.h` types. (`uint8_t`, etc.)
+## How does it work? ##
+In the core of the library, there are two types of objects: `TypeFormatter` and `Struct`.
+
+`TypeFormatter` is a formatting object, and can parse and format values of a specified type.
+`Struct` is a structure object, which enables you to define rules for object serialization.
+
+The developer can thus declare a class using the following notation:
+```python
+class <StructName>(Struct):
+  <member_name> = <TypeClass>(<default_value>)
+```
+or
+```python
+class Message(Struct):
+  TimeOfDay = UInt64()      # This creates a UInt64 formatter.
+  DataLength = UInt8(128)   # A default value is optional
+
+Message().serialize() #=> b'\x00\x00\x00\x00\x00\x00\x00\x00\x80'
+```
+
+The declared data members are in fact (due to python's syntax), static.
+When a class object is created, the constructor (deep) copies each of the formatters' `default_value`s into an instance variable in the same name,
+so some transparency is achieved by "tricking" the user into thinking no formatters are involved:
+```
+Class members:
+  TimeOfDay:  UInt64 (default_value = 0)
+  DataLength: UInt8  (default_value = 128)
+Object members:
+  TimeOfDay:  0
+  DataLength: 128
+```
+
+When the object is serialized, the object's data is cross-referenced with the class's formatters.
+All of the integers are internally converted using python's `struct.pack` function.
+
+## Validators ##
+A validator object can be assigned to a struct data member to define validation rules.
+When deserializing an object from binary data, the framework will validate the values
+using the user-defined validation-rules.
+
+If an invalid value is encountered, a ValueError is raised.
+
+```python
+class MeIsValidated(Struct):
+    member = Int8(0, validator=RangeValidator(-15, 15))
+
+...
+
+MeIsValidated.deserialize('\x10')  # => ValueError: The deserialized data is invalid.
+```
+
+There are a few built-in validators defined for the following rules:
+ - RangeValidator: Range check
+ - ExactValueValidator: Exact value check
+ - BitSizeValidator: Bit-Length check
+ - CustomValidator: Lambda validation (receives a user function.)
+ - TrueValidator & FalseValidator: Dummy validators (always true / always false)
+
+More validators can be defined by subclassing the Validator class.
+
+### Lambda Validators ###
+The user can use a lambda expression (or any function) instead of a validator object as validation rule.
+
+```python
+class MeIsLambda(Struct):
+    member = Int8(0, validator=lambda value: value % 3 == 0)
+```
 
 ## Hooks ##
-Two serialization hooks are called by the framework on a struct upon serialization:
- - `before_serialize`: Called before serialization. Can be used to prepare the object.
- - `after_serialize`: Called after a struct serialization.
+A `Struct` derived class can implement hooks.
+### before_serialize ###
+This method will be called before a serialization is about to occur.
 
-By default, these hooks do nothing, but a developer sub-classing `Struct` can override them.
-The call to these function can be disabled by settings `HydraSettings.dry_run` to `True`.
+**Note**: This method will not be called if either `HydraSettings.dry_run` is True,
+or `serialize` is called with `dry_run=True`
 
-Example:
-```python
-class Header(Struct):
-    opcode = Enum('Invalid', {'Invalid': 0, 'Data': 1})
-    payload_length = uint32_t(0)
+### after_serialize ###
+This method will be called after a serialization has occurd.
 
-class DataMessage(Struct):
-    header = NestedStruct(Header(opcode = 'Data'))
-    payload = Array(MAX_SIZE)
+**Note**: This method will not be called if either `HydraSettings.dry_run` is True,
+or `serialize` is called with `dry_run=True`
 
-    def before_serialize(self):
-        self.header.payload_length = len(self.payload)
-```
+### validate ###
+Called after a de-serialization is completed.
+If it returns a `False`y value, the `deserialize` raises an error.
 
-## Validation ##
-Validation rules can be added to struct fields to define a "valid state".
+If not overriden by the user in a custom Struct class, the method
+will validate using the type formatters' validators.
 
-This state is checked upon deserialization, and an exception is raised if the data is invalid.
+The user can, of course, override the method to add custom validations,
+and then invoke the original validate method.
 
-This feature can be turned off by settings `HydraSettings.validate` to `False`.
-
-An optional validation can also be checked during serialize time by setting `HydraSettings.validate_on_serialize` to `True`.
-
-Example:
-```python
-class Header(Struct):
-    opcode = Enum('Invalid', {'Invalid': 0, 'Data': 1})
-    payload_length = uint32_t(0, validator=RangeValidator(0, MAX_SIZE))
-
-class DataMessage(Struct):
-    header = NestedStruct(Header(opcode = 'Data'))
-    payload = Array(MAX_SIZE)
-
-    def before_serialize(self):
-        self.header.payload_length = len(self.payload)
-
-```
-
-## Endian ##
-The endian-ness of fields or structs can be set and changed and overrided at multiple points.
-
-```python
-class Header(Struct):
-    opcode = Enum('Invalid', {'Invalid': 0, 'Data': 1})
-    payload_length = uint32_t(0, validator=RangeValidator(0, MAX_SIZE), endian=BigEndian)
-
-class DataMessage(Struct):
-    header = NestedStruct(Header(opcode = 'Data'))
-    payload = Array(MAX_SIZE)
-
-    def before_serialize(self):
-        self.header.payload_length = len(self.payload)
-
-
-DataMessage().serialize() # The payload_length field is now in big endian.
-DataMessage().serialize(settings = {'endian': LittleEndian})  # The field is now forced to be little endian.
-
-HydraSettings.endian = BigEndian
-DataMessage().serialize() # Everyting is in big endian.
-```
+**Note**: No errors will be raised if `HydraSettings.validate` is set to `False`.

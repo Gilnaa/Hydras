@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 """
-This file tests the library's ability to cope with Python3.
+This file tests the libraries ability to cope with Python3.
 
 :file: Python3Tests.py
 :date: 05/02/2016
 :authors:
-    - Gilad Naaman <gilad.doom@gmail.com>
+    - Gilad Naaman <gilad.naaman@gmail.com>
 """
 
 import unittest
@@ -13,10 +13,10 @@ from hydra import *
 
 
 class Sample(Struct):
-    notice_me_senpai = UInt32()
+    member = UInt32()
 
 
-class TestPython3(unittest.TestCase):
+class TestPytjon3(unittest.TestCase):
     def setUp(self):
         HydraSettings.push()
         HydraSettings.endian = LittleEndian
@@ -25,6 +25,7 @@ class TestPython3(unittest.TestCase):
         HydraSettings.pop()
 
     def test_bytes_object(self):
+        """ Tests the deserialize function works with both strings and bytes. """
         data_str = '\x00\x00\x00\x32'
         data_bytes = b'\x00\x00\x00\x32'
 

@@ -6,7 +6,7 @@ This file contains tests for the 'EnumClass' type formatter.
 
 :date: 10/06/2016
 :authors:
-    - Gilad Naaman <gilad.doom@gmail.com>
+    - Gilad Naaman <gilad.naaman@gmail.com>
 """
 
 import unittest

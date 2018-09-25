@@ -1,8 +1,9 @@
+#!/usr/bin/env python
 from setuptools import setup
 
 setup(name='Hydra',
-      version='0.2',
-      description='A module for construction of structured binary blobs.',
+      version='1.0.0',
+      description='A module for constructions of structured binary packets.',
       author='Gilad Naaman',
-      author_email='gilad.doom@gmail.com',
+      author_email='gilad.naaman@gmail.com',
       packages=['hydra'])
