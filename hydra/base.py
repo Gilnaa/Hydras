@@ -170,7 +170,7 @@ class StructMeta(with_metaclass(Preparable, type)):
             }
 
             # Ensure that only the last member can be a VLA
-            for name, formatter in metadata['members'][:-1]:
+            for member_name, formatter in metadata['members'][:-1]:
                 if not formatter.is_constant_size():
                     raise TypeError("Only the last member of a struct can be variable length.")
 
