@@ -392,3 +392,12 @@ class Struct(StructBase):
 
         output = output.strip('\n')
         return '%s {\n%s\n}' % (type(self).get_name(), indent_text(output))
+
+    def __iter__(self):
+        for key, value in self.__dict__.items():
+            if issubclass(type(value), Struct):
+                yield key, dict(value)
+            if type(value) in (list, tuple) and issubclass(type(value[0]), Struct):
+                yield key, [dict(d) for d in value]
+            else:
+                yield key, value
