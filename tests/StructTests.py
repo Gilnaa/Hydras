@@ -77,7 +77,19 @@ class StructTests(unittest.TestCase):
 
         # Force little endian
         self.assertEqual(big_endian_struct.serialize({'endian': LittleEndian}), b'\x00\xFF')
-
+    
+    def test_dict_conversion(self):
+        d = dict(ComplicatedStruct())
+        expected_dict = {
+                'other_struct': { 'only_element': 0 },
+                'some_field': [
+                    {'b_first_variable': 0xDE, 'a_second_variable': 0xCAFE, 'x_third_variable': 0xAD},
+                    {'b_first_variable': 0xDE, 'a_second_variable': 0xCAFE, 'x_third_variable': 0xAD},
+                    {'b_first_variable': 0xDE, 'a_second_variable': 0xCAFE, 'x_third_variable': 0xAD},
+                    ],
+                'numeric': 0
+            }
+        self.assertEqual(d, expected_dict)
 
 if __name__ == '__main__':
     unittest.main()
