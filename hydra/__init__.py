@@ -11,7 +11,6 @@ A catch-all file that imports the whole framework.
 from .base import *
 
 # Type formatters.
-from .bcd import *
 from .scalars import *
 from .vectors import *
 from .enums import *
