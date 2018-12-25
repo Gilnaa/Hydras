@@ -321,7 +321,6 @@ class Struct(StructBase):
 
         return class_object
 
-
     ###################
     #      Hooks      #
     ###################
@@ -395,7 +394,8 @@ class Struct(StructBase):
         return '%s {\n%s\n}' % (type(self).get_name(), indent_text(output))
     
     def __iter__(self):
-        for key, value in self.__dict__.items():
+        for key, _ in self._metadata['members']:
+            value = getattr(self, key)
             if issubclass(type(value), Struct):
                 yield key, dict(value)
             elif type(value) in (list, tuple):

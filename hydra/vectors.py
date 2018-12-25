@@ -104,7 +104,6 @@ class TypedArray(TypeFormatter):
             self.formatter.format(s, settings) for s in value
         ), len(self))
 
-
     def parse(self, raw_data, settings=None):
         if len(raw_data) != len(self):
             raise ValueError('Raw data is not in the correct length.')
@@ -271,6 +270,7 @@ class VariableArray(TypeFormatter):
     def get_actual_length(self, value):
         return len(value) * len(self.formatter)
 
+
 class NestedStruct(TypeFormatter):
     """
     A type formatter allowing its user to put one Struct object inside another.
@@ -295,7 +295,6 @@ class NestedStruct(TypeFormatter):
             self.nested_object_type = get_as_type(struct_type_or_object)
             default_value = get_as_value(struct_type_or_object)
         else:
-            raise TypeError('"struct" parameter must be either a Struct subclass or a Struct object.')
             raise TypeError("struct_type_or_object should be either a Struct class or a Struct object.")
 
         super(NestedStruct, self).__init__(default_value, *args, **kwargs)

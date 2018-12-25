@@ -12,12 +12,14 @@ import inspect
 import itertools
 from .compatibility import *
 
-sequencial_id = 0
+sequential_id = 0
+
 
 def get_next_id():
-    global sequencial_id
-    sequencial_id += 1
-    return sequencial_id
+    """ Returns an incrementing counter that is globally-unique """
+    global sequential_id
+    sequential_id += 1
+    return sequential_id
 
 
 def fit_bytes_to_size(byte_string, length):
@@ -55,11 +57,14 @@ def is_little_endian(endian):
 
     return struct.pack(endian + 'H', 0x00FF) == struct.pack('<H', 0x00FF)
 
+
 def get_as_type(t):
     return t if inspect.isclass(t) else type(t)
 
+
 def get_as_value(v):
     return v() if inspect.isclass(v) else v
+
 
 def indexof(callable, it):
     for i, v in enumerate(it):
@@ -125,8 +130,10 @@ def padto(data, size, pad_val=b'\x00', leftpad=False):
             data = padding + data
     return data
 
+
 def append_tuple(tup, *args):
     return tuple(itertools.chain(tup, args))
+
 
 BYTE_MASK = mask(8)
 WORD_MASK = mask(16)

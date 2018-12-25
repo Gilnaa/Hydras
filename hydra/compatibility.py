@@ -1,7 +1,7 @@
 """
 Contains patches that enbale the framework to work in both python2 and python3.
 
-:file: compatability.py
+:file: compatibility.py
 :date: 05/02/2016
 :authors:
     - Gilad Naaman <gilad.naaman@gmail.com>
@@ -10,7 +10,6 @@ Contains patches that enbale the framework to work in both python2 and python3.
 import sys
 import platform
 import inspect
-from collections import OrderedDict
 from functools import wraps
 
 is_py3 = sys.version_info.major >= 3
@@ -22,6 +21,7 @@ if not is_py3:
     int_types = (int, long)
 else:
     int_types = (int,)
+
 
 def with_metaclass(meta, *bases):
     class metaclass(meta):

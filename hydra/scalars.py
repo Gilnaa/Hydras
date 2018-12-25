@@ -11,6 +11,7 @@ Contains various primitive type formatters.
 from .base import *
 import struct
 
+
 class Scalar(TypeFormatter):
 
     """ Provides a handy base class for primitive-value formatters. """
@@ -42,7 +43,6 @@ class Scalar(TypeFormatter):
             struct.pack(self.format_string, value)
         except struct.error:
             raise ValueError("Value out of type bounds")
-
 
     def format(self, value, settings=None):
         if isinstance(value, (str, bytes)):

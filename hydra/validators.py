@@ -129,6 +129,7 @@ class BitSizeValidator(Validator):
         """
         return (value >= 0) and (bit_length(value) <= self.max_bit_size)
 
+
 class ListValidator(Validator):
     """ A validator that checks if a value is in a list of valid values. """
 

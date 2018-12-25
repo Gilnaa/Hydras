@@ -14,6 +14,7 @@ from .base import TypeFormatter
 from .vectors import NestedStruct
 from .utils import padto, get_as_type, get_as_value
 
+
 class ParsedUnion(object):
     def __init__(self, types, binary_data):
         super(ParsedUnion, self).__init__()

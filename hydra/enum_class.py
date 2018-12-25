@@ -182,7 +182,7 @@ class EnumClass(EnumClassBase):
 
             raise ValueError()
 
-        return (normalize_value(a) == normalize_value(b))
+        return normalize_value(a) == normalize_value(b)
 
     def __iter__(self):
         return self.literals.items().__iter__()
