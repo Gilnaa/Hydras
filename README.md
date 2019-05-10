@@ -1,7 +1,7 @@
-# Hydra #
+# Hydras #
 [![Build Status](https://travis-ci.org/Gilnaa/Hydras.svg?branch=master)](https://travis-ci.org/Gilnaa/Hydras)
 
-'*Hydra*' is a python library that allows the developer to create structured binary data according to simple rules,
+'*Hydras*' is a python library that allows the developer to create structured binary data according to simple rules,
 somewhat similar to how C does it with a struct.
 
 
