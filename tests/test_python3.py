@@ -9,7 +9,7 @@ This file tests the libraries ability to cope with Python3.
 """
 
 import unittest
-from hydra import *
+from hydras import *
 
 
 class Sample(Struct):

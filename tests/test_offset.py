@@ -7,7 +7,7 @@ Contains tests for the struct-offset feature.
 :authors:
     - Gilad Naaman <gilad.naaman@gmail.com>
 """
-from hydra import *
+from hydras import *
 import unittest
 
 

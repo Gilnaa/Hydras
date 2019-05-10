@@ -7,7 +7,7 @@ This example shows the usage of the TypedArray class.
 :authors:
     - Gilad Naaman <gilad.naaman@gmail.com>
 """
-from hydra import *
+from hydras import *
 
 
 class SmallStruct(Struct):

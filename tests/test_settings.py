@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import unittest
-from hydra import *
+from hydras import *
 
 
 class BigStruct(Struct):

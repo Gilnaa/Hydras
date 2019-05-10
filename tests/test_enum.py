@@ -9,7 +9,7 @@ This file contains tests for the "Enum" type formatters.
     - Kfir Gollan
 """
 import unittest
-from hydra import *
+from hydras import *
 
 
 class TestEnumFormatters(unittest.TestCase):

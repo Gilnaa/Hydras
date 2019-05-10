@@ -9,7 +9,7 @@ This file contains tests for the "Scalar" type formatters.
 """
 
 import unittest
-from hydra import *
+from hydras import *
 
 
 class TestScalarFormatters(unittest.TestCase):

@@ -9,7 +9,7 @@ Shows the basic use of the Hydra framework.
     - Gilad Naaman <gilad.naaman@gmail.com>
 """
 
-from hydra import *
+from hydras import *
 import binascii
 
 

@@ -8,7 +8,7 @@ This example shows the usage of the Offset feature class.
     - Gilad Naaman <gilad.naaman@gmail.com>
 """
 
-from hydra import *
+from hydras import *
 from binascii import hexlify
 
 

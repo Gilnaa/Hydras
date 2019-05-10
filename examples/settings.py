@@ -3,7 +3,7 @@
 This example shows how to use and change various serialization settings.
 """
 
-from hydra import *
+from hydras import *
 
 
 class ControlPacket(Struct):

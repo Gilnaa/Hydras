@@ -10,7 +10,7 @@ This file contains tests for the 'EnumClass' type formatter.
 """
 
 import unittest
-from hydra import *
+from hydras import *
 
 
 class EOpcodeThingie(EnumClass):

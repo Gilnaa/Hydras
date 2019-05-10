@@ -7,7 +7,7 @@ Contains tests for type formatters from the `vectors.py` module.
 :authors:
     - Gilad Naaman <gilad.naaman@gmail.com>
 """
-from hydra import *
+from hydras import *
 import unittest
 
 

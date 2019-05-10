@@ -8,7 +8,7 @@ Contains various tests for the `Struct` class of the base module.
     - Gilad Naaman <gilad.naaman@gmail.com>
 """
 import unittest
-from hydra import *
+from hydras import *
 
 #########################
 # "Structs" for testing #

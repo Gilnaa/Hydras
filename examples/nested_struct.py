@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from hydra import *
+from hydras import *
 
 
 class Header(Struct):

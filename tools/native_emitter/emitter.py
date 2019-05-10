@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from emitters import *
-from hydra import *
+from hydras import *
 from argparse import ArgumentParser
 from time import strftime
 import imp

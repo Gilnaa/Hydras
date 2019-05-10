@@ -38,10 +38,13 @@ class EnumClassMeta(with_metaclass(Preparable, type)):
             # Initialize static members
             next_expected_value = 0
             for name, literal in literals:
-                if literal is None or (
-                        isinstance(literal, Literal) and literal.value is None):
+                if literal is None:
                     literal = next_expected_value
                 elif isinstance(literal, Literal):
+                    # Update the literal object before taking its value
+                    if literal.value is None:
+                        literal.value = next_expected_value
+
                     literal = literal.value
                 next_expected_value = literal + 1
                 literals_dict[name] = literal if isinstance(literal, int_types) else literal.value
@@ -87,7 +90,7 @@ class EnumClass(EnumClassBase):
         settings = self.resolve_settings(settings)
 
         if isinstance(value, str):
-            value = self.literals[value].value
+            value = self.literals[value]
         elif isinstance(value, Literal):
             value = value.value
 

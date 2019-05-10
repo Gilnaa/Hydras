@@ -7,7 +7,7 @@ Contains tests for the bitfield type formatter.
 :authors:
     - Gilad Naaman <gilad.naaman@gmail.com>
 """
-from hydra import *
+from hydras import *
 import unittest
 
 

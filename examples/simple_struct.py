@@ -2,7 +2,7 @@
 
 # `hydra` is designed to be imported with this notation.
 # You can use the regular import notation, but it can get a bit cumbersome.
-from hydra import *
+from hydras import *
 
 # You can inherit from the Struct class to define a description of
 # the memory layout of a structure.

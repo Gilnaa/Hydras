@@ -8,7 +8,7 @@ Contains tests for the variable length array.
     - Gilad Naaman <gilad.naaman@gmail.com>
 """
 
-from hydra import *
+from hydras import *
 import unittest
 
 

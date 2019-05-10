@@ -8,7 +8,7 @@ This example demonstrates how to implement several of `Struct`'s hooks.
     - Gilad Naaman <gilad.naaman@gmail.com>
 """
 
-from hydra import *
+from hydras import *
 
 class DynamicStruct(Struct):
     """ 

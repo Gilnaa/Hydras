@@ -9,7 +9,7 @@ A review of the Array type.
     - Gilad Naaman <gilad.naaman@gmail.com>
 """
 
-from hydra import *
+from hydras import *
 import binascii
 
 ################
