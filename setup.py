@@ -6,4 +6,5 @@ setup(name='Hydras',
       description='A module for constructions of structured binary packets.',
       author='Gilad Naaman',
       author_email='gilad@naaman.io',
+      tests_require=["pytest"],
       packages=['hydras'])
