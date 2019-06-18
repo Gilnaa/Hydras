@@ -73,7 +73,6 @@ class BitFieldTests(unittest.TestCase):
     def test_bitfield_big_endian(self):
         """ Test output values for BigEndian. """
 
-        # Test vectors from Sharvit.
         tests = {
             # Size: 16 bits => 2 bytes.
             BitField(i=Bits(5, 31), j=Bits(11)):                    b"\xF8\x00",
