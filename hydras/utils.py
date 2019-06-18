@@ -12,15 +12,6 @@ import inspect
 import itertools
 from .compatibility import *
 
-sequential_id = 0
-
-
-def get_next_id():
-    """ Returns an incrementing counter that is globally-unique """
-    global sequential_id
-    sequential_id += 1
-    return sequential_id
-
 
 def fit_bytes_to_size(byte_string, length):
     """
@@ -71,6 +62,7 @@ def indexof(callable, it):
         if callable(v):
             return i
     raise ValueError
+
 
 def to_chunks(byte_string, chunk_size):
     """
