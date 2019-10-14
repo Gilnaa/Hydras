@@ -4,16 +4,18 @@
 '*Hydras*' is a python library that allows the developer to create structured binary data according to simple rules,
 somewhat similar to how C does it with a struct.
 
+Why "Hydras"? `Hydra` was taken.
+
 
 ## Example ##
 ```python
 class Header(Struct):
-  Opcode = UInt8(4)       # The `opcode`'s default value will now be `4`
-  DataLength = UInt32()
+  Opcode = uint8_t(4)       # The `opcode`'s default value will now be `4`
+  DataLength = uint32_t()
 
 class DataPacket(Struct):
   # A nested structure. "DataLength = 128" sets the default DataLength value for `Header`s inside `DataPacket`s
-  Header = NestedStruct(Header(DataLength = 128))
+  Header = Header(DataLength=128)
   # Creates an array of bytes with a length of 128 bytes.
   Payload = Array(length = 128)
 
@@ -58,8 +60,8 @@ class <StructName>(Struct):
 or
 ```python
 class Message(Struct):
-  TimeOfDay = UInt64()      # This creates a UInt64 formatter.
-  DataLength = UInt8(128)   # A default value is optional
+  TimeOfDay = uint64_t      # This creates a u64 formatter. Parentheses are optional.
+  DataLength = uint8_t(128)   # A default value is optional
 
 Message().serialize() #=> b'\x00\x00\x00\x00\x00\x00\x00\x00\x80'
 ```
@@ -69,8 +71,8 @@ When a class object is created, the constructor (deep) copies each of the format
 so some transparency is achieved by "tricking" the user into thinking no formatters are involved:
 ```
 Class members:
-  TimeOfDay:  UInt64 (default_value = 0)
-  DataLength: UInt8  (default_value = 128)
+  TimeOfDay:  uint64_t (default_value = 0)
+  DataLength: uint8_t  (default_value = 128)
 Object members:
   TimeOfDay:  0
   DataLength: 128
@@ -88,7 +90,7 @@ If an invalid value is encountered, a ValueError is raised.
 
 ```python
 class MeIsValidated(Struct):
-    member = Int8(0, validator=RangeValidator(-15, 15))
+    member = int8_t(0, validator=RangeValidator(-15, 15))
 
 ...
 
@@ -109,7 +111,7 @@ The user can use a lambda expression (or any function) instead of a validator ob
 
 ```python
 class MeIsLambda(Struct):
-    member = Int8(0, validator=lambda value: value % 3 == 0)
+    member = int8_t(0, validator=lambda value: value % 3 == 0)
 ```
 
 ## Hooks ##

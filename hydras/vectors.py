@@ -137,7 +137,7 @@ class TypedArray(TypeFormatter):
         return a == b
 
     def validate_assignment(self, value):
-        if not any([isinstance(value, t) for t in [str, tuple, list]]):
+        if not any([isinstance(value, t) for t in [str, tuple, list, bytes]]):
             raise TypeError('Assigned value must be a string, tuple, or a list.')
 
         if len(value) > self.length:
