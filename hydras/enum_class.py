@@ -14,10 +14,29 @@ import collections
 
 
 class Literal(object):
-    def __init__(self, value=None):
+    def __init__(self, value=None, enum_name=None, literal_name=None):
         if value is not None and not isinstance(value, int_types):
             raise TypeError('value must be an int type')
         self.value = value
+        self._enum_name = enum_name
+        self._literal_name = literal_name
+
+    def __eq__(self, other):
+        if isinstance(other, Literal):
+            return self.value == other.value
+        elif isinstance(other, int_types):
+            return self.value == other
+        else:
+            return TypeError()
+
+    def __int__(self):
+        return self.value
+
+    def __long__(self):
+        return self.value
+
+    def __repr__(self):
+        return '{}.{}'.format(self._enum_name, self._literal_name)
 
 
 class EnumClassMeta(with_metaclass(Preparable, type)):
@@ -37,17 +56,18 @@ class EnumClassMeta(with_metaclass(Preparable, type)):
 
             # Initialize static members
             next_expected_value = 0
-            for name, literal in literals:
+            for lit_name, literal in literals:
                 if literal is None:
-                    literal = next_expected_value
+                    lit_value = next_expected_value
                 elif isinstance(literal, Literal):
                     # Update the literal object before taking its value
-                    if literal.value is None:
-                        literal.value = next_expected_value
+                    lit_value = literal.value or next_expected_value
+                else:
+                    lit_value = literal
 
-                    literal = literal.value
-                next_expected_value = literal + 1
-                literals_dict[name] = literal if isinstance(literal, int_types) else literal.value
+                next_expected_value = lit_value + 1
+                literals_dict[lit_name] = Literal(lit_value, name, lit_name)
+                attributes[lit_name] = literals_dict[lit_name]
 
             metadata['literals'] = literals_dict
             setattr(cls, '_metadata', metadata)
@@ -91,10 +111,8 @@ class EnumClass(EnumClassBase):
 
         if isinstance(value, str):
             value = self.literals[value]
-        elif isinstance(value, Literal):
-            value = value.value
 
-        return self.formatter.format(value, settings)
+        return self.formatter.format(int(value), settings)
 
     def parse(self, raw_data, settings=None):
         """ Parse the raw_data into an enum literal. """

@@ -163,15 +163,26 @@ class StructMeta(with_metaclass(Preparable, type)):
     def __new__(cls, name, bases, attributes):
 
         if not hasattr(cls, '_metadata') or cls._metadata['name'] != name:
+            members = []
+            for member_name, fmt in attributes.items():
+                if issubclass(type(fmt), TypeFormatter):
+                    members.append((member_name, fmt))
+                elif inspect.isclass(fmt) and issubclass(fmt, TypeFormatter):
+                    members.append((member_name, fmt()))
+                    attributes[member_name] = fmt()
+                elif issubclass(type(fmt), StructMeta) or issubclass(type(type(fmt)), StructMeta):
+                    members.append((member_name, NestedStruct(fmt)))
+                    attributes[member_name] = NestedStruct(fmt)
+
             metadata = {
                 'name': name,
                 'length': 0,
-                'members': tuple((k, v) for k, v in attributes.items() if issubclass(get_as_type(v), TypeFormatter))
+                'members': tuple(members)
             }
 
             # Ensure that only the last member can be a VLA
-            for member_name, formatter in metadata['members'][:-1]:
-                if not formatter.is_constant_size():
+            for member_name, field in metadata['members'][:-1]:
+                if not field.is_constant_size():
                     raise TypeError("Only the last member of a struct can be variable length.")
 
             # Initialize a copy of the data properties.
@@ -219,7 +230,6 @@ class Struct(StructBase):
 
     @classmethod
     def extract_range(cls, fields, first=None, last=None, inclusive=True):
-        import sys
         """
         Extract a range from a list of fields.
 
@@ -392,7 +402,7 @@ class Struct(StructBase):
 
         output = output.strip('\n')
         return '%s {\n%s\n}' % (type(self).get_name(), indent_text(output))
-    
+
     def __iter__(self):
         for key, _ in self._metadata['members']:
             value = getattr(self, key)
@@ -407,3 +417,44 @@ class Struct(StructBase):
                     yield key, list(value)
             else:
                 yield key, value
+
+
+class NestedStruct(TypeFormatter):
+    """
+    A type formatter allowing its user to put one Struct object inside another.
+
+    Usage Example:
+        class S(Struct):
+            Y = UInt8()
+
+        NestedStruct(S)
+        # ... or ...
+        NestedStruct(S(Y = 10))
+    """
+
+    def __init__(self, struct_type_or_object, *args, **kwargs):
+        """
+        Initialize this NestedStruct object.
+
+        :param struct_type_or_object:   The type of the NestedStruct or Struct object.
+        """
+        default_value = None
+        if issubclass(get_as_type(struct_type_or_object), Struct):
+            self.nested_object_type = get_as_type(struct_type_or_object)
+            default_value = get_as_value(struct_type_or_object)
+        else:
+            raise TypeError("struct_type_or_object should be either a Struct class or a Struct object.")
+
+        super(NestedStruct, self).__init__(default_value, *args, **kwargs)
+
+    def format(self, value, settings=None):
+        return value.serialize(settings)
+
+    def parse(self, raw_data, settings=None):
+        return self.nested_object_type.deserialize(raw_data, settings)
+
+    def __len__(self):
+        return len(self.default_value)
+
+    def __repr__(self):
+        return '<{} ({})>'.format(type(self).__name__, self.nested_object_type)

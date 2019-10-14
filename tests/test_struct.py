@@ -16,26 +16,25 @@ from hydras import *
 
 
 class SmallStruct(Struct):
-    only_element = UInt8()
+    only_element = uint8_t
 
 
 class SimpleStruct(Struct):
-    b_first_variable = UInt8(0xDE)
-    a_second_variable = UInt16(0xCAFE)
-    x_third_variable = UInt8(0xAD)
+    b_first_variable = uint8_t(0xDE)
+    a_second_variable = uint16_t(0xCAFE)
+    x_third_variable = uint8_t(0xAD)
 
 
 class ComplicatedStruct(Struct):
-    other_struct = NestedStruct(SmallStruct)
-    some_field = TypedArray(3, SimpleStruct)
-    numeric = UInt32()
+    other_struct = SmallStruct
+    some_field = Array(3, SimpleStruct)
+    numeric = uint32_t
 
 
 class BigEndianStruct(Struct):
     settings = {'endian': BigEndian}
 
-    hello_i_am_trapped_in_a_variable_factory_please_help_theyre_going_to_ = UInt16(0xFF00)
-
+    hello_i_am_trapped_in_a_variable_factory_please_help_theyre_going_to_ = uint16_t(0xFF00)
 
 ##############
 # Test Cases #
@@ -81,7 +80,7 @@ class StructTests(unittest.TestCase):
     def test_dict_conversion(self):
         d = dict(ComplicatedStruct())
         expected_dict = {
-                'other_struct': { 'only_element': 0 },
+                'other_struct': {'only_element': 0},
                 'some_field': [
                     {'b_first_variable': 0xDE, 'a_second_variable': 0xCAFE, 'x_third_variable': 0xAD},
                     {'b_first_variable': 0xDE, 'a_second_variable': 0xCAFE, 'x_third_variable': 0xAD},
@@ -90,6 +89,7 @@ class StructTests(unittest.TestCase):
                 'numeric': 0
             }
         self.assertEqual(d, expected_dict)
+
 
 if __name__ == '__main__':
     unittest.main()

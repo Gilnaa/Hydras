@@ -14,6 +14,16 @@ from .compatibility import *
 from .utils import *
 
 
+sequential_id = 0
+
+
+def get_next_id():
+    """ Returns an incrementing counter that is globally-unique """
+    global sequential_id
+    sequential_id += 1
+    return sequential_id
+
+
 class Bits(object):
     """ A class used to define a bit section. """
 
