@@ -12,7 +12,7 @@ from .base import *
 import struct
 
 
-class Scalar(TypeFormatter):
+class Scalar(Serializer):
 
     """ Provides a handy base class for primitive-value formatters. """
 

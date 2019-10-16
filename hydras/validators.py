@@ -8,7 +8,6 @@ Contains the validation components of this library.
 """
 
 from .utils import *
-from .compatibility import *
 
 
 class Validator(object):
@@ -63,9 +62,9 @@ class RangeValidator(Validator):
                             includes the upper bound. [Default: True]
         """
         if inclusive:
-            self.range = xrange(min_val, max_val + 1)
+            self.range = range(min_val, max_val + 1)
         else:
-            self.range = xrange(min_val, max_val)
+            self.range = range(min_val, max_val)
 
     def validate(self, value):
         """
@@ -127,7 +126,7 @@ class BitSizeValidator(Validator):
 
         :return:    `True` if the value has a valid bit size; `False` otherwise.
         """
-        return (value >= 0) and (bit_length(value) <= self.max_bit_size)
+        return (value >= 0) and (value.bit_length() <= self.max_bit_size)
 
 
 class ListValidator(Validator):

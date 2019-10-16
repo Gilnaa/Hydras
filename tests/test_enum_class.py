@@ -90,11 +90,9 @@ class EnumClassTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             f.parse('\xFF')
 
-
-    def test_self_compatability(self):
+    def test_self_compatibility(self):
         s = StructStuff()
         self.assertEqual(s, StructStuff.deserialize(s.serialize()))
-
 
 
 if __name__ == '__main__':

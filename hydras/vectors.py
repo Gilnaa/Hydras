@@ -8,16 +8,14 @@ Contains non-trivial type formatters.
 """
 
 from .base import *
-from .compatibility import *
 from .scalars import *
 from .utils import *
 
-import struct
 import copy
 import inspect
 
 
-class Pad(TypeFormatter):
+class Pad(Serializer):
 
     """ A type formatter whose purpose is to act as a data-less padding."""
 
@@ -45,7 +43,7 @@ class Pad(TypeFormatter):
         return fit_bytes_to_size(raw_data, self.length)
 
 
-class TypedArray(TypeFormatter):
+class Array(Serializer):
 
     """
     A type formatter which enables the developer to format a list of items.
@@ -55,16 +53,16 @@ class TypedArray(TypeFormatter):
 
     def __init__(self, length, items_type=UInt8, default_value=None, *args, **kwargs):
         """
-        Initialize this TypedArray object.
+        Initialize this Array object.
 
         Note:
             `items_type` can be a class derived from `Scalar`, a class derived
             from `Struct` or an object of this class.
             Any other value will cause a `TypeError` to be raised.
 
-        :param length:          The number of items in this TypedArray.
-        :param items_type:      The type of each item in the TypedArray. [default: `UInt8`]
-        :param default_value:   The default value for the TypedArray.    [default: `None`]
+        :param length:          The number of items in this Array.
+        :param items_type:      The type of each item in the Array. [default: `UInt8`]
+        :param default_value:   The default value for the Array.    [default: `None`]
 
         :param args:            A paramater list to be passed to the base class.
         :param kwargs:          A paramater dict to be passed to the base class.
@@ -78,7 +76,7 @@ class TypedArray(TypeFormatter):
         if default_value is None:
             default_value = alternate_default_value
 
-        super(TypedArray, self).__init__(default_value, *args, **kwargs)
+        super(Array, self).__init__(default_value, *args, **kwargs)
 
     def init_type_resolver(self, items_type, length):
         """ A helper method for the constructor. """
@@ -88,13 +86,13 @@ class TypedArray(TypeFormatter):
         # type is a Struct type/class.
         if issubclass(t, Struct):
             self.formatter = NestedStruct(items_type)
-            return tuple(t() if inspect.isclass(items_type) else copy.deepcopy(items_type) for i in xrange(length))
+            return tuple(t() if inspect.isclass(items_type) else copy.deepcopy(items_type) for i in range(length))
         # type is a Scalar class.
-        elif issubclass(t, TypeFormatter):
+        elif issubclass(t, Serializer):
             self.formatter = get_as_value(items_type)
-            return tuple(self.formatter.default_value for _ in xrange(length))
+            return tuple(self.formatter.default_value for _ in range(length))
         else:
-            raise TypeError('TypedArray: items_type should be a TypeFormatter or a Struct')
+            raise TypeError('Array: items_type should be a Serializer or a Struct')
 
     def format(self, value, settings=None):
         """ Return a serialized representation of this object. """
@@ -122,11 +120,11 @@ class TypedArray(TypeFormatter):
 
         return f(
             self.formatter.parse(raw_data[begin:begin+len(self.formatter)], settings)
-            for begin in xrange(0, len(self), len(self.formatter))
+            for begin in range(0, len(self), len(self.formatter))
         )
 
     def __len__(self):
-        """ Return the size of this TypedArray in bytes."""
+        """ Return the size of this Array in bytes."""
         return self.byte_size
 
     def values_equal(self, a, b):
@@ -147,7 +145,7 @@ class TypedArray(TypeFormatter):
             self.formatter.validate_assignment(i)
 
 
-class VariableArray(TypeFormatter):
+class VariableArray(Serializer):
 
     """
     A type formatter which enables the developer to format a list of items.
@@ -157,16 +155,16 @@ class VariableArray(TypeFormatter):
 
     def __init__(self, min_length, max_length, items_type=UInt8, default_value=None, *args, **kwargs):
         """
-        Initialize this TypedArray object.
+        Initialize this Array object.
 
         Note:
             `items_type` can be a class derived from `Scalar`, a class derived
             from `Struct` or an object of this class.
             Any other value will cause a `TypeError` to be raised.
 
-        :param length:          The number of items in this TypedArray.
-        :param items_type:      The type of each item in the TypedArray. [default: `UInt8`]
-        :param default_value:   The default value for the TypedArray.    [default: `None`]
+        :param length:          The number of items in this Array.
+        :param items_type:      The type of each item in the Array. [default: `UInt8`]
+        :param default_value:   The default value for the Array.    [default: `None`]
 
         :param args:            A paramater list to be passed to the base class.
         :param kwargs:          A paramater dict to be passed to the base class.
@@ -193,13 +191,13 @@ class VariableArray(TypeFormatter):
         # type is a Struct type/class.
         if issubclass(t, Struct):
             self.formatter = NestedStruct(items_type)
-            return tuple(t() if inspect.isclass(items_type) else copy.deepcopy(items_type) for i in xrange(length))
+            return tuple(t() if inspect.isclass(items_type) else copy.deepcopy(items_type) for i in range(length))
         # type is a Scalar class.
-        elif issubclass(t, TypeFormatter):
+        elif issubclass(t, Serializer):
             self.formatter = get_as_value(items_type)
-            return tuple(self.formatter.default_value for _ in xrange(length))
+            return tuple(self.formatter.default_value for _ in range(length))
         else:
-            raise TypeError('TypedArray: items_type should be a TypeFormatter or a Struct')
+            raise TypeError('Array: items_type should be a Serializer or a Struct')
 
     def format(self, value, settings=None):
         """ Return a serialized representation of this object. """
@@ -230,11 +228,11 @@ class VariableArray(TypeFormatter):
         fmt_size = len(self.formatter)
         return f(
             self.formatter.parse(raw_data[begin:begin+len(self.formatter)], settings)
-            for begin in xrange(0, min(self.max_length * fmt_size, len(raw_data)), fmt_size)
+            for begin in range(0, min(self.max_length * fmt_size, len(raw_data)), fmt_size)
         )
 
     def __len__(self):
-        """ Return the *minimal* size of this TypedArray in bytes."""
+        """ Return the *minimal* size of this Array in bytes."""
         return self.byte_size
 
     def values_equal(self, a, b):

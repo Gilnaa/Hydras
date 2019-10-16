@@ -9,8 +9,6 @@ Contains various utility methods.
 
 import struct
 import inspect
-import itertools
-from .compatibility import *
 
 
 def fit_bytes_to_size(byte_string, length):
@@ -73,7 +71,7 @@ def to_chunks(byte_string, chunk_size):
     :return:            A list of byte-strings.
     """
     chunks = []
-    for idx in xrange(0, len(byte_string), chunk_size):
+    for idx in range(0, len(byte_string), chunk_size):
         chunks.append(byte_string[idx:idx + chunk_size])
 
     return chunks
@@ -88,17 +86,6 @@ def mask(length, offset=0):
     :return:        An integer representing the bit mask.
     """
     return ((1 << length) - 1) << offset
-
-
-def bit_length(num):
-    """
-    Measure the length of the number in bits.
-
-    :param num: The number to measure.
-    :return:    The minimal amount of bits needed to represent the number.
-    """
-    # `- 2` is due the output format of `bin`: `0bXXXXXXX`
-    return len(bin(num)) - 2
 
 
 def string2bytes(s):
@@ -121,13 +108,3 @@ def padto(data, size, pad_val=b'\x00', leftpad=False):
         else:
             data = padding + data
     return data
-
-
-def append_tuple(tup, *args):
-    return tuple(itertools.chain(tup, args))
-
-
-BYTE_MASK = mask(8)
-WORD_MASK = mask(16)
-DWORD_MASK = mask(32)
-QWORD_MASK = mask(64)

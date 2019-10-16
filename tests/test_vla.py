@@ -43,7 +43,7 @@ class TestVLA(unittest.TestCase):
         nimrod_fucking_kaplan = FUBAR()
 
         # Positive tests
-        for i in xrange(1, 5):
+        for i in range(1, 5):
             nimrod_fucking_kaplan.florp = [0] * i
 
         # sub- minimal length

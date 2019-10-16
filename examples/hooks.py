@@ -31,7 +31,7 @@ class DynamicStruct(Struct):
 
     def validate(self):
         """ Ensures the validity of the DynamicStruct's data members. """
-        if self.even_message not in xrange(2):
+        if self.even_message not in range(2):
             return False
 
         if self.index < 0:
@@ -51,7 +51,7 @@ def print_raw_data(raw_data):
 
 if __name__ == '__main__':
     s = DynamicStruct()
-    for i in xrange(5):
+    for i in range(5):
         print_raw_data(s.serialize())
     # Output:
     #   00 00 00 00 00

@@ -2,10 +2,10 @@
 from setuptools import setup
 
 with open('README.md', 'r') as f:
-      long_description = f.read()
+    long_description = f.read()
 
 setup(name='Hydras',
-      version='2.0.2',
+      version='3.0.0',
       description='A module for constructions of structured binary packets.',
       author='Gilad Naaman',
       author_email='gilad@naaman.io',
@@ -15,8 +15,7 @@ setup(name='Hydras',
       url="https://github.com/Gilnaa/Hydras",
       packages=['hydras'],
       classifiers=[
-            'Programming Language :: Python :: 2',
-            'Programming Language :: Python :: 3',
-            'License :: OSI Approved :: MIT License',
-            'Operating System :: OS Independent',
+          'Programming Language :: Python :: 3',
+          'License :: OSI Approved :: MIT License',
+          'Operating System :: OS Independent',
       ])

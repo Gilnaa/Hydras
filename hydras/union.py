@@ -10,7 +10,7 @@ Contains the union type formatter.
 
 import struct
 import inspect
-from .base import TypeFormatter
+from .base import Serializer
 from .vectors import NestedStruct
 from .utils import padto, get_as_type, get_as_value
 
@@ -19,8 +19,8 @@ class ParsedUnion(object):
     def __init__(self, types, binary_data):
         super(ParsedUnion, self).__init__()
 
-        if not all(isinstance(t, TypeFormatter) for t in types):
-            raise ValueError('All union types must inherit TypeFormatter')
+        if not all(isinstance(t, Serializer) for t in types):
+            raise ValueError('All union types must inherit Serializer')
 
         self.formatters = types
         self.binary_data = binary_data
@@ -42,16 +42,16 @@ class ParsedUnion(object):
         return 'ParsedUnion {} [{}]'.format(self.formatters, len(self))
 
 
-class Union(TypeFormatter):
+class Union(Serializer):
 
     def __init__(self, types, default_value=None, pad_length=0, *args, **kwargs):
-        self.formatters = tuple(get_as_value(t) if issubclass(get_as_type(t), TypeFormatter) else NestedStruct(t) for t in types)
+        self.formatters = tuple(get_as_value(t) if issubclass(get_as_type(t), Serializer) else NestedStruct(t) for t in types)
 
         if len(self.formatters) < 2:
             raise ValueError('A union must contain at least 2 types')
 
-        if not all(isinstance(t, TypeFormatter) for t in self.formatters):
-            raise ValueError('All union types must inherit TypeFormatter')
+        if not all(isinstance(t, Serializer) for t in self.formatters):
+            raise ValueError('All union types must inherit Serializer')
 
         if default_value is not None and (
                 inspect.isclass(default_value) or type(default_value) not in (type(t) for t in self.formatters)):

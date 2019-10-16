@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-This example shows the usage of the TypedArray class.
+This example shows the usage of the Array class.
 
 :file: arrays.py
 :date: 08/09/2015

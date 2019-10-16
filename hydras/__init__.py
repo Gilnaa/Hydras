@@ -13,7 +13,6 @@ from .base import *
 # Type formatters.
 from .scalars import *
 from .vectors import *
-from .enums import *
 from .enum_class import *
 from .bitfield import *
 from .union import *
@@ -44,5 +43,4 @@ i32 = Int32
 i64 = Int64
 
 # Aliases (Misc)
-Array = TypedArray
 VLA = VariableArray

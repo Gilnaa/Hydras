@@ -15,7 +15,7 @@ import collections
 
 class Literal(object):
     def __init__(self, value=None, enum_name=None, literal_name=None):
-        if value is not None and not isinstance(value, int_types):
+        if value is not None and not isinstance(value, int):
             raise TypeError('value must be an int type')
         self.value = value
         self._enum_name = enum_name
@@ -24,7 +24,7 @@ class Literal(object):
     def __eq__(self, other):
         if isinstance(other, Literal):
             return self.value == other.value
-        elif isinstance(other, int_types):
+        elif isinstance(other, int):
             return self.value == other
         else:
             return TypeError()
@@ -32,16 +32,12 @@ class Literal(object):
     def __int__(self):
         return self.value
 
-    def __long__(self):
-        return self.value
-
     def __repr__(self):
         return '{}.{}'.format(self._enum_name, self._literal_name)
 
 
-class EnumClassMeta(with_metaclass(Preparable, type)):
+class EnumClassMeta(SerializerMeta):
     def __new__(cls, name, bases, attributes):
-
         if not hasattr(cls, '_metadata') or cls._metadata['name'] != name:
             metadata = {
                 'name': name,
@@ -50,7 +46,7 @@ class EnumClassMeta(with_metaclass(Preparable, type)):
 
             literals = (
                 (k, v) for k, v in attributes.items()
-                if isinstance(v, append_tuple(int_types, Literal)) and not k.startswith('_')
+                if isinstance(v, (int, Literal)) and not k.startswith('_')
             )
             literals_dict = collections.OrderedDict()
 
@@ -78,11 +74,7 @@ class EnumClassMeta(with_metaclass(Preparable, type)):
         return collections.OrderedDict()
 
 
-class EnumClassBase(with_metaclass(EnumClassMeta, TypeFormatter)):
-    pass
-
-
-class EnumClass(EnumClassBase):
+class EnumClass(Serializer, metaclass=EnumClassMeta):
     """ An enum formatter that can be shared between structs. """
     def __init__(self, default_value=None, type_formatter=None, *args, **kwargs):
         self.enum_literals = collections.OrderedDict()
@@ -99,7 +91,7 @@ class EnumClass(EnumClassBase):
             if default_value.value not in self.literals.values():
                 raise ValueError('Literal object is not included in the enum.')
             default_value = default_value.value
-        elif isinstance(default_value, int_types):
+        elif isinstance(default_value, int):
             if not self.is_constant_valid(default_value):
                 raise ValueError('Literal constant is not included in the enum: %d' % default_value)
 
@@ -148,7 +140,7 @@ class EnumClass(EnumClassBase):
         """ Get the name of the constant from a number or a Literal object. """
         if isinstance(num, Literal):
             num = num.value
-        elif not isinstance(num, int_types):
+        elif not isinstance(num, int):
             raise TypeError()
 
         return next((n for n, v in self.literals.items() if v == num), None)
@@ -164,7 +156,7 @@ class EnumClass(EnumClassBase):
 
     def render_integer(self, value):
         """ Render the enum value as an integer. """
-        if isinstance(value, int_types):
+        if isinstance(value, int):
             return str(value)
 
         if isinstance(value, Literal):
@@ -181,7 +173,7 @@ class EnumClass(EnumClassBase):
         if HydraSettings.full_enum_names:
             template = type(self).__name__ + '.%s'
 
-        if isinstance(value, int_types):
+        if isinstance(value, int):
             return template % self.get_const_name(value)
 
         if isinstance(value, Literal):
@@ -194,7 +186,7 @@ class EnumClass(EnumClassBase):
 
     def values_equal(self, a, b):
         def normalize_value(val):
-            if isinstance(val, int_types):
+            if isinstance(val, int):
                 return val
             if isinstance(val, Literal):
                 return val.value

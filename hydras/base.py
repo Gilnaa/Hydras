@@ -9,6 +9,8 @@ Contains the core classes of the framework.
 
 import copy
 import collections
+from typing import Dict, Any
+
 from .utils import *
 from .validators import *
 
@@ -91,12 +93,23 @@ class HydraSettings(object):
         cls.update(cls.__snapshot_stack__.pop())
 
 
-class TypeFormatter(object):
-    """ The base type for Hydra's formatters. """
+class SerializerMeta(type):
+    def __getitem__(self, item_count):
+        """
+        This hack enables the familiar array syntax: `type[count]`.
+        For example, a 3-item array of type uint8_t might look like `uint8_t[3]`.
+        """
+        # Importing locally in order to avoid weird import-cycle issues
+        from .vectors import Array
+        return Array(item_count, self)
+
+
+class Serializer(metaclass=SerializerMeta):
+    """ The base type for Hydra's serializers. """
 
     def __init__(self, default_value, validator=None, settings=None):
         """
-        Creates a new formmater.
+        Creates a new formatter.
 
         :param default_value:   The default value of the formatter.
         :param validator:       [Optional] A validation object.
@@ -110,7 +123,7 @@ class TypeFormatter(object):
         """ Resolves the flat settings for a single action on this formatter. """
         return HydraSettings.resolve(overrides, self.settings)
 
-    def format(self, value, settings=None):
+    def format(self, value, settings=None) -> bytes:
         """ When implemented in derived classes, returns the byte representation of the give value. """
         raise NotImplementedError()
 
@@ -118,7 +131,7 @@ class TypeFormatter(object):
         """ When implemented in derived classes, parses the raw data. """
         raise NotImplementedError()
 
-    def validate(self, value):
+    def validate(self, value) -> bool:
         """
         Validate the given value using this formatters rules.
 
@@ -159,15 +172,14 @@ class TypeFormatter(object):
         raise NotImplementedError()
 
 
-class StructMeta(with_metaclass(Preparable, type)):
+class StructMeta(type):
     def __new__(cls, name, bases, attributes):
-
         if not hasattr(cls, '_metadata') or cls._metadata['name'] != name:
             members = []
             for member_name, fmt in attributes.items():
-                if issubclass(type(fmt), TypeFormatter):
+                if issubclass(type(fmt), Serializer):
                     members.append((member_name, fmt))
-                elif inspect.isclass(fmt) and issubclass(fmt, TypeFormatter):
+                elif inspect.isclass(fmt) and issubclass(fmt, Serializer):
                     members.append((member_name, fmt()))
                     attributes[member_name] = fmt()
                 elif issubclass(type(fmt), StructMeta) or issubclass(type(type(fmt)), StructMeta):
@@ -199,11 +211,7 @@ class StructMeta(with_metaclass(Preparable, type)):
         return collections.OrderedDict()
 
 
-class StructBase(with_metaclass(StructMeta, object)):
-    pass
-
-
-class Struct(StructBase):
+class Struct(metaclass=StructMeta):
     """ A base class for the framework's structs. """
 
     settings = {}
@@ -270,11 +278,11 @@ class Struct(StructBase):
         return fields[start_index:end_index]
 
     @classmethod
-    def offsetof(cls, member):
+    def offsetof(cls, member: str) -> int:
         """ Calculate the offset of the given member in the struct. """
         return sum(len(v) for _, v in cls.extract_range(cls._metadata['members'], last=member, inclusive=False))
 
-    def serialize(self, settings=None, start=None, end=None):
+    def serialize(self, settings: Dict[str, Any] = None, start=None, end=None):
         """
         Serialize this struct into a byte string.
 
@@ -316,7 +324,7 @@ class Struct(StructBase):
         if len(raw_data) < len(class_object):
             raise ValueError('The supplied raw data is too short for a struct of type "%s"' % cls.get_name())
 
-        for name, formatter in class_object._metadata['members']:
+        for name, formatter in cls._metadata['members']:
             if formatter.is_constant_size():
                 data_piece = raw_data[:len(formatter)]
                 raw_data = raw_data[len(formatter):]
@@ -420,17 +428,10 @@ class Struct(StructBase):
                 yield key, value
 
 
-class NestedStruct(TypeFormatter):
+class NestedStruct(Serializer):
     """
-    A type formatter allowing its user to put one Struct object inside another.
-
-    Usage Example:
-        class S(Struct):
-            Y = UInt8()
-
-        NestedStruct(S)
-        # ... or ...
-        NestedStruct(S(Y = 10))
+    A serializer that wraps structs.
+    This is an implementation detail and should not be directly used by the user.
     """
 
     def __init__(self, struct_type_or_object, *args, **kwargs):

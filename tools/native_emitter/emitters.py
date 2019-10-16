@@ -61,7 +61,7 @@ class ArrayEmitter(Emitter):
         return '%s%s %s[%d];' % (tabs, type_name, name, length)
 
     def can_emit_for(self, member):
-        return type(member) is TypedArray
+        return type(member) is Array
 
 
 class BitFieldEmitter(Emitter):

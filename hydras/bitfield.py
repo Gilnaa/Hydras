@@ -10,7 +10,6 @@ Contains the bitfield type formatter implementation.
 import collections
 
 from .base import *
-from .compatibility import *
 from .utils import *
 
 
@@ -39,7 +38,7 @@ class Bits(object):
         self.default_value = default_value
 
 
-class BitField(TypeFormatter):
+class BitField(Serializer):
     """ A type formatter class used to format a bitfield. """
 
     def __init__(self, *args, **kwargs):
@@ -102,7 +101,7 @@ class BitField(TypeFormatter):
             if name in value:
                 bit_value = value[name]
 
-            if settings['enforce_bitfield_size'] and (bit_length(bit_value) > bit_section.size):
+            if settings['enforce_bitfield_size'] and (bit_value.bit_length() > bit_section.size):
                 raise ValueError('Bitfield value %u exceeds maximum bit size. ("%s": %u bits)' %
                                  (bit_value, name, bit_section.size))
 
@@ -115,8 +114,8 @@ class BitField(TypeFormatter):
 
         # Convert the integer into a byte-list using struct.pack.
         output = b''
-        for byte_index in xrange(self.byte_size):
-            output += struct.pack('B', byte_value & BYTE_MASK)
+        for byte_index in range(self.byte_size):
+            output += struct.pack('B', byte_value & 0xFF)
             byte_value >>= 8
 
         if not little_endian:
@@ -148,7 +147,7 @@ class BitField(TypeFormatter):
             if type(byte) == str:
                 byte = ord(byte)
 
-            num = (num << 8) | (byte & BYTE_MASK)
+            num = (num << 8) | (byte & 0xFF)
 
         if not little_endian:
             num >>= self.padding_bits

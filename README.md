@@ -47,9 +47,9 @@ if __name__ == '__main__':
 You can find more examples in the examples directory.
 
 ## How does it work? ##
-In the core of the library, there are two types of objects: `TypeFormatter` and `Struct`.
+In the core of the library, there are two types of objects: `Serializer` and `Struct`.
 
-`TypeFormatter` is a formatting object, and can parse and format values of a specified type.
+`Serializer` is a formatting object, and can parse and format values of a specified type.
 `Struct` is a structure object, which enables you to define rules for object serialization.
 
 The developer can thus declare a class using the following notation:
