@@ -92,7 +92,7 @@ class TypedArray(TypeFormatter):
         # type is a Scalar class.
         elif issubclass(t, TypeFormatter):
             self.formatter = get_as_value(items_type)
-            return tuple(0 for _ in xrange(length))
+            return tuple(self.formatter.default_value for _ in xrange(length))
         else:
             raise TypeError('TypedArray: items_type should be a TypeFormatter or a Struct')
 
@@ -197,7 +197,7 @@ class VariableArray(TypeFormatter):
         # type is a Scalar class.
         elif issubclass(t, TypeFormatter):
             self.formatter = get_as_value(items_type)
-            return tuple(0 for _ in xrange(length))
+            return tuple(self.formatter.default_value for _ in xrange(length))
         else:
             raise TypeError('TypedArray: items_type should be a TypeFormatter or a Struct')
 
