@@ -22,10 +22,10 @@ class TestScalarFormatters(unittest.TestCase):
 
     def test_unsigned_integers(self):
         # Create the formatters objects.
-        u8 = UInt8()
-        u16 = UInt16()
-        u32 = UInt32()
-        u64 = UInt64()
+        u8 = uint8_t()
+        u16 = uint16_t()
+        u32 = uint32_t()
+        u64 = uint64_t()
 
         # Little endian
         self.assertEqual(u8.format(1), b'\x01')
@@ -41,16 +41,16 @@ class TestScalarFormatters(unittest.TestCase):
         self.assertEqual(u64.format(0xDEAFDEADBEEFCAFE), b'\xDE\xAF\xDE\xAD\xBE\xEF\xCA\xFE')
 
     def test_endian(self):
-        little_u32 = UInt32(endian=BigEndian)
+        little_u32 = uint32_t(endian=BigEndian)
 
         self.assertEqual(little_u32.format(0xDEADBEEF), b'\xDE\xAD\xBE\xEF')
 
     def test_value_assignment_out_of_bounds(self):
         class Foo(Struct):
-            u8 = UInt8()
-            u16 = UInt16()
-            u32 = UInt32()
-            u64 = UInt64()
+            u8 = uint8_t()
+            u16 = uint16_t()
+            u32 = uint32_t()
+            u64 = uint64_t()
 
         f = Foo()
 

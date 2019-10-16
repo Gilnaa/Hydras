@@ -36,16 +36,16 @@ UNSIGNED_TYPES = [
 HYDRA_FLOAT = 'Float'
 HYDRA_DOUBLE = 'Double'
 UNSIGNED_HYDRA_TYPES = {
-    8: 'UInt8',
-    16: 'UInt16',
-    32: 'UInt32',
-    64: 'UInt64'
+    8: 'uint8_t',
+    16: 'uint16_t',
+    32: 'uint32_t',
+    64: 'uint64_t'
 }
 SIGNED_HYDRA_TYPES = {
-    8: 'Int8',
-    16: 'Int16',
-    32: 'Int32',
-    64: 'Int64'
+    8: 'int8_t',
+    16: 'int16_t',
+    32: 'int32_t',
+    64: 'int64_t'
 }
 
 

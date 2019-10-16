@@ -21,7 +21,7 @@ class EOpcodeThingie(EnumClass):
 
 
 class StructThingie(Struct):
-    opcode = EOpcodeThingie()
+    opcode = EOpcodeThingie
     pad = uint8_t(0xFF)
 
 
@@ -93,6 +93,10 @@ class EnumClassTests(unittest.TestCase):
     def test_self_compatibility(self):
         s = StructStuff()
         self.assertEqual(s, StructStuff.deserialize(s.serialize()))
+
+    def test_enum_array(self):
+        enarr = EOpcodeThingie[2]
+        self.assertEqual(enarr.format((EOpcodeThingie.a, EOpcodeThingie.b)), b'\x00\x00\x00\x00\x01\x00\x00\x00')
 
 
 if __name__ == '__main__':

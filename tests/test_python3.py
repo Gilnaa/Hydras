@@ -13,7 +13,7 @@ from hydras import *
 
 
 class Sample(Struct):
-    member = UInt32()
+    member = uint32_t()
 
 
 class TestPytjon3(unittest.TestCase):

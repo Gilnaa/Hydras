@@ -20,27 +20,14 @@ from .union import *
 # Misc.
 from .validators import *
 
-# Aliases (stdint)
-uint8_t = UInt8
-uint16_t = UInt16
-uint32_t = UInt32
-uint64_t = UInt64
+# Aliases / shorthand
+u8 = uint8_t
+u16 = uint16_t
+u32 = uint32_t
+u64 = uint64_t
+i8 = int8_t
+i16 = int16_t
+i32 = int32_t
+i64 = int64_t
 
-int8_t = Int8
-int16_t = Int16
-int32_t = Int32
-int64_t = Int64
-
-# Aliases (Rust)
-u8 = UInt8
-u16 = UInt16
-u32 = UInt32
-u64 = UInt64
-
-i8 = Int8
-i16 = Int16
-i32 = Int32
-i64 = Int64
-
-# Aliases (Misc)
 VLA = VariableArray

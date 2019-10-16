@@ -27,7 +27,7 @@ class SimpleStruct(Struct):
 
 class ComplicatedStruct(Struct):
     other_struct = SmallStruct
-    some_field = Array(3, SimpleStruct)
+    some_field = SimpleStruct[3]
     numeric = uint32_t
 
 

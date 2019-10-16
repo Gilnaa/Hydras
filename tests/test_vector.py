@@ -14,13 +14,13 @@ import unittest
 class ThatStruct(Struct):
     """ A simple `Struct`. """
 
-    data = UInt16(0x55AA)
-    indicator = UInt8(0xFA)
+    data = uint16_t(0x55AA)
+    indicator = uint8_t(0xFA)
     alignment = Pad()
 
 
 class HasArray(Struct):
-    array = Array(4)
+    array = uint8_t[4]
 
 
 class VectorTests(unittest.TestCase):
@@ -35,18 +35,18 @@ class VectorTests(unittest.TestCase):
 
     def test_typed_array_default_type(self):
         """ Test the Array's default item type. """
-        array = Array(3)
+        array = uint8_t[3]
         self.assertEqual(array.format([0] * 3), b'\x00\x00\x00')
 
     def test_typed_array_non_default_type(self):
         """ Test the TypeArray using a scalar value other than the default. """
-        array = Array(2, UInt16)
+        array = uint16_t[2]
         data = [0xDEAF, 0xCAFE]
         self.assertEqual(array.format(data), b'\xAF\xDE\xFE\xCA')
 
     def test_typed_array_big_endian(self):
         """ Test the Array with a multi-byte type in BigEndian. """
-        array = Array(3, Int16)
+        array = int16_t[3]
         HydraSettings.endian = BigEndian
 
         data = [-2, 100, 200]
@@ -54,7 +54,7 @@ class VectorTests(unittest.TestCase):
 
     def test_nested_struct_array(self):
         """ Test the Array with a Struct type. """
-        array = Array(2, ThatStruct)
+        array = ThatStruct[2]
         data = [ThatStruct(), ThatStruct()]
         data[0].indicator = 0
 

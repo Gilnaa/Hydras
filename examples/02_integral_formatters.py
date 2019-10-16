@@ -15,15 +15,15 @@ import binascii
 
 class Showcase(Struct):
     """ A list of the available 'primitive' numeric types. """
-    unsigned_byte = UInt8()
-    unsigned_word = UInt16()
-    unsigned_dword = UInt32()
-    unsigned_qword = UInt64()
+    unsigned_byte = uint8_t()
+    unsigned_word = uint16_t()
+    unsigned_dword = uint32_t()
+    unsigned_qword = uint64_t()
 
-    signed_byte = Int8()
-    signed_word = Int16()
-    signed_dword = Int32()
-    signed_qword = Int64()
+    signed_byte = int8_t()
+    signed_word = int16_t()
+    signed_dword = int32_t()
+    signed_qword = int64_t()
 
     single_float = Float()
     double_float = Double()

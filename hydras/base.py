@@ -171,6 +171,15 @@ class Serializer(metaclass=SerializerMeta):
         """ Returns the length (byte size) of the formatter's type. """
         raise NotImplementedError()
 
+    def __getitem__(self, item_count):
+        """
+        This hack enables the familiar array syntax: `type()[count]`.
+        For example, a 3-item array of type uint16_t might look like `uint16_t(endian=BigEndian)[3]`.
+        """
+        # Importing locally in order to avoid weird import-cycle issues
+        from .vectors import Array
+        return Array(item_count, self)
+
 
 class StructMeta(type):
     def __new__(cls, name, bases, attributes):
@@ -209,6 +218,15 @@ class StructMeta(type):
 
     def __prepare__(cls, bases, **kwargs):
         return collections.OrderedDict()
+
+    def __getitem__(self, item_count):
+        """
+        This hack enables the familiar array syntax: `type()[count]`.
+        For example, a 3-item array of type uint16_t might look like `uint16_t(endian=BigEndian)[3]`.
+        """
+        # Importing locally in order to avoid weird import-cycle issues
+        from .vectors import Array
+        return Array(item_count, self)
 
 
 class Struct(metaclass=StructMeta):
@@ -426,6 +444,15 @@ class Struct(metaclass=StructMeta):
                     yield key, list(value)
             else:
                 yield key, value
+
+    def __getitem__(self, item_count):
+        """
+        This hack enables the familiar array syntax: `type()[count]`.
+        For example, a 3-item array of type uint16_t might look like `uint16_t(endian=BigEndian)[3]`.
+        """
+        # Importing locally in order to avoid weird import-cycle issues
+        from .vectors import Array
+        return Array(item_count, self)
 
 
 class NestedStruct(Serializer):

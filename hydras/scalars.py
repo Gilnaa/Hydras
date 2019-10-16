@@ -61,60 +61,60 @@ class Scalar(Serializer):
         return len(self.format(0))
 
 
-class UInt8(Scalar):
+class uint8_t(Scalar):
     """ An 8 bits long unsigned integer. """
 
     def __init__(self, *args, **kwargs):
-        super(UInt8, self).__init__('B', *args, **kwargs)
+        super(uint8_t, self).__init__('B', *args, **kwargs)
 
 
-class Int8(Scalar):
+class int8_t(Scalar):
     """ An 8 bits long signed integer. """
 
     def __init__(self, *args, **kwargs):
-        super(Int8, self).__init__('b', *args, **kwargs)
+        super(int8_t, self).__init__('b', *args, **kwargs)
 
 
-class UInt16(Scalar):
+class uint16_t(Scalar):
     """ A 16 bits long unsigned integer. """
 
     def __init__(self, *args, **kwargs):
-        super(UInt16, self).__init__('H', *args, **kwargs)
+        super(uint16_t, self).__init__('H', *args, **kwargs)
 
 
-class Int16(Scalar):
+class int16_t(Scalar):
     """ A 16 bits long signed integer. """
 
     def __init__(self, *args, **kwargs):
-        super(Int16, self).__init__('h', *args, **kwargs)
+        super(int16_t, self).__init__('h', *args, **kwargs)
 
 
-class UInt32(Scalar):
+class uint32_t(Scalar):
     """ A 32 bits long unsigned integer. """
 
     def __init__(self, *args, **kwargs):
-        super(UInt32, self).__init__('I', *args, **kwargs)
+        super(uint32_t, self).__init__('I', *args, **kwargs)
 
 
-class Int32(Scalar):
+class int32_t(Scalar):
     """ A 32 bits long signed integer. """
 
     def __init__(self, *args, **kwargs):
-        super(Int32, self).__init__('i', *args, **kwargs)
+        super(int32_t, self).__init__('i', *args, **kwargs)
 
 
-class UInt64(Scalar):
+class uint64_t(Scalar):
     """ A 64 bits long unsigned integer. """
 
     def __init__(self, *args, **kwargs):
-        super(UInt64, self).__init__('Q', *args, **kwargs)
+        super(uint64_t, self).__init__('Q', *args, **kwargs)
 
 
-class Int64(Scalar):
+class int64_t(Scalar):
     """ A 64 bits long signed integer. """
 
     def __init__(self, *args, **kwargs):
-        super(Int64, self).__init__('q', *args, **kwargs)
+        super(int64_t, self).__init__('q', *args, **kwargs)
 
 
 class Float(Scalar):

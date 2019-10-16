@@ -48,10 +48,10 @@ class Array(Serializer):
     """
     A type formatter which enables the developer to format a list of items.
 
-    The default value's type is a byte (UInt8), but can subtituted for any Struct or Scalar.
+    The default value's type is a byte (uint8_t), but can subtituted for any Struct or Scalar.
     """
 
-    def __init__(self, length, items_type=UInt8, default_value=None, *args, **kwargs):
+    def __init__(self, length, items_type=uint8_t, default_value=None, *args, **kwargs):
         """
         Initialize this Array object.
 
@@ -61,7 +61,7 @@ class Array(Serializer):
             Any other value will cause a `TypeError` to be raised.
 
         :param length:          The number of items in this Array.
-        :param items_type:      The type of each item in the Array. [default: `UInt8`]
+        :param items_type:      The type of each item in the Array. [default: `uint8_t`]
         :param default_value:   The default value for the Array.    [default: `None`]
 
         :param args:            A paramater list to be passed to the base class.
@@ -150,10 +150,10 @@ class VariableArray(Serializer):
     """
     A type formatter which enables the developer to format a list of items.
 
-    The default value's type is a byte (UInt8), but can subtituted for any Struct or Scalar.
+    The default value's type is a byte (uint8_t), but can subtituted for any Struct or Scalar.
     """
 
-    def __init__(self, min_length, max_length, items_type=UInt8, default_value=None, *args, **kwargs):
+    def __init__(self, min_length, max_length, items_type=uint8_t, default_value=None, *args, **kwargs):
         """
         Initialize this Array object.
 
@@ -163,7 +163,7 @@ class VariableArray(Serializer):
             Any other value will cause a `TypeError` to be raised.
 
         :param length:          The number of items in this Array.
-        :param items_type:      The type of each item in the Array. [default: `UInt8`]
+        :param items_type:      The type of each item in the Array. [default: `uint8_t`]
         :param default_value:   The default value for the Array.    [default: `None`]
 
         :param args:            A paramater list to be passed to the base class.

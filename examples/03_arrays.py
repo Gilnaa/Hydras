@@ -20,8 +20,8 @@ class SmallStruct(Struct):
 
 class HasArraysInIt(Struct):
     byte_array = Array(8)
-    dword_array = Array(2, uint32_t)
-    object_array = Array(4, SmallStruct)
+    dword_array = uint32_t[2]
+    object_array = SmallStruct[4]
 
 
 if __name__ == '__main__':

@@ -12,11 +12,11 @@ import unittest
 
 
 class Unvalidated(Struct):
-    member = UInt8()
+    member = uint8_t()
 
 
 class FalseValidated(Struct):
-    member = UInt8(0, validator=FalseValidator())
+    member = uint8_t(0, validator=FalseValidator())
 
 
 class ValidationTests(unittest.TestCase):
@@ -51,13 +51,13 @@ class ValidationTests(unittest.TestCase):
             self.fail("An exception was raised even when turned off by user.")
 
     def test_exact_value_validation(self):
-        formatter = UInt8(0, validator=ExactValueValidator(13))
+        formatter = uint8_t(0, validator=ExactValueValidator(13))
         self.assertTrue(formatter.validate(13))
         self.assertFalse(formatter.validate(0))
 
     def test_range_validation(self):
-        inclusive_formatter = UInt32(0, validator=RangeValidator(-15, 15))
-        exclusive_formatter = UInt32(0, validator=RangeValidator(-15, 15, inclusive=False))
+        inclusive_formatter = uint32_t(0, validator=RangeValidator(-15, 15))
+        exclusive_formatter = uint32_t(0, validator=RangeValidator(-15, 15, inclusive=False))
 
         # Inclusive
         self.assertTrue(inclusive_formatter.validate(-15))
@@ -82,7 +82,7 @@ class ValidationTests(unittest.TestCase):
         self.assertFalse(exclusive_formatter.validate(1 << 16))
 
     def test_bit_length_validation(self):
-        formatter = UInt64(0, validator=BitSizeValidator(10))
+        formatter = uint64_t(0, validator=BitSizeValidator(10))
 
         self.assertTrue(formatter.validate(1 << 9))
         self.assertTrue(formatter.validate((1 << 10) - 1))
@@ -93,6 +93,6 @@ class ValidationTests(unittest.TestCase):
         self.assertFalse(formatter.validate(1 << 11))
 
     def test_lambda_validation(self):
-        formatter = UInt8(0, validator=lambda value: value > 4)
+        formatter = uint8_t(0, validator=lambda value: value > 4)
         self.assertTrue(formatter.validate(6))
         self.assertFalse(formatter.validate(0))
