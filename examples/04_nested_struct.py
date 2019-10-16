@@ -26,6 +26,6 @@ class SomePacket(Struct):
 if __name__ == '__main__':
     packet = SomePacket()
 
-    print type(packet)
-    print type(packet.header)
-    print type(packet.data)
+    print(type(packet))
+    print(type(packet.header))
+    print(type(packet.data))

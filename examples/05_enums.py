@@ -30,19 +30,20 @@ class SomeHeader(Struct):
                             'D': 3,
                             'Z': 0xFF}, format_type=uint8_t)
 
+
 if __name__ == '__main__':
-    print '>> Inline Enums'
+    print('>> Inline Enums')
     header = SomeHeader()
 
-    print binascii.hexlify(header.serialize())
+    print(binascii.hexlify(header.serialize()))
     # => 00000000ff
 
     header.opcode = 'Ack'
-    print binascii.hexlify(header.serialize())
+    print(binascii.hexlify(header.serialize()))
     # => 02000000ff
 
     header.opcode = SomeHeader.opcode.Nack
-    print binascii.hexlify(header.serialize())
+    print(binascii.hexlify(header.serialize()))
     # => 03000000ff
 
 
@@ -59,19 +60,19 @@ class Opcodes(EnumClass):
 
 
 class AnotherHeader(Struct):
-    opcode = Opcodes()
+    opcode = Opcodes
     different_default = Opcodes(Opcodes.Data)
     smaller_opcode = Opcodes(type_formatter=uint8_t)
-    timestamp = uint64_t()
+    timestamp = uint64_t
 
 
 class ThirdHeader(Struct):
-    opcode = Opcodes()
-    useless_variable = uint8_t()
+    opcode = Opcodes
+    useless_variable = uint8_t
 
 
 if __name__ == '__main__':
-    print '>> Enums Classes'
+    print('>> Enums Classes')
 
     header = AnotherHeader()
-    print binascii.hexlify(header.serialize())
+    print(binascii.hexlify(header.serialize()))

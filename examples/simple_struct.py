@@ -4,13 +4,15 @@
 # You can use the regular import notation, but it can get a bit cumbersome.
 from hydras import *
 
+
 # You can inherit from the Struct class to define a description of
 # the memory layout of a structure.
 class StructName(Struct):
-    FieldName = UInt32()        # Unsigned; 4 bytes.
-    AnotherField = UInt8(87)    # Signed; 1 byte. Default value is 87
+    FieldName = uint32_t        # Unsigned; 4 bytes.
+    AnotherField = uint8_t(87)  # Signed; 1 byte. Default value is 87
     SpareForAlignment = Pad(3)  # Padding. Translates to zeros.
-    ThirdField = UInt64()       # Signed; 8 bytes.
+    ThirdField = uint64_t       # Signed; 8 bytes.
+
 
 if __name__ == '__main__':
     # Create a new instance of the struct.

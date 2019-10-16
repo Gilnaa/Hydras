@@ -11,14 +11,14 @@ from hydras import *
 
 
 class SmallStruct(Struct):
-    member = UInt16()
+    member = uint16_t
     spare = Pad(2)
 
 
 class ThisIsAStruct(Struct):
-    byte_array = TypedArray(8)                  # A byte array with 8 items.
-    int_array = TypedArray(5, Int32)            # An integer array with 5 items.
-    struct_array = TypedArray(3, SmallStruct)   # An array of 3 struct, each sized 4 bytes.
+    byte_array = Array(8)                  # A byte array with 8 items.
+    int_array = Array(5, int32_t)            # An integer array with 5 items.
+    struct_array = Array(3, SmallStruct)   # An array of 3 struct, each sized 4 bytes.
 
 
 if __name__ == '__main__':

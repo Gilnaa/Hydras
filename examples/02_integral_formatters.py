@@ -49,4 +49,4 @@ class PrimitiveFeatures(Struct):
 
 
 if __name__ == '__main__':
-    print binascii.hexlify(PrimitiveFeatures().serialize())
+    print(binascii.hexlify(PrimitiveFeatures().serialize()))

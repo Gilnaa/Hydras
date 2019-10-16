@@ -20,8 +20,8 @@ class DynamicStruct(Struct):
     """
 
     # Data members.
-    index = UInt32()
-    even_message = UInt8()
+    index = uint32_t()
+    even_message = uint8_t()
 
     # Hooks.
     def after_serialize(self):
@@ -42,10 +42,12 @@ class DynamicStruct(Struct):
 
         return True
 
+
 def print_raw_data(raw_data):
     for byte in raw_data:
-        print '%02x' % ord(byte),
-    print
+        print('%02x' % ord(byte),)
+    print()
+
 
 if __name__ == '__main__':
     s = DynamicStruct()
@@ -62,10 +64,9 @@ if __name__ == '__main__':
     raw_data = b'\x00\x00\x00\x00\x03'
     try:
         s2 = DynamicStruct.deserialize(raw_data)
-    except Exception, e:
-        print e 
+    except Exception as e:
+        print(e)
     # => "The deserialized data is invalid"
-
 
     # Available hooks:
     #   - `before_serialize`    Arbitrary method called before serialization.
