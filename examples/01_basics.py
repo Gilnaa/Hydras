@@ -6,7 +6,7 @@ Shows the basic use of the Hydra framework.
 
 :date: 11/06/2016
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 
 from hydras import *

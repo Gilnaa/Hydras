@@ -5,7 +5,7 @@ This example demonstrates how to implement several of `Struct`'s hooks.
 :file: hooks.py
 :date: 08/09/2015
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 
 from hydras import *

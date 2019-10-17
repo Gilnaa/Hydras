@@ -4,7 +4,7 @@ A catch-all file that imports the whole framework.
 :file: __init__.py
 :date: 27/08/2015
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 
 # Core classes.

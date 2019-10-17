@@ -5,7 +5,7 @@ Contains tests for type formatters from the `vectors.py` module.
 :file: VectorTests.py
 :date: 29/08/2015
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 from hydras import *
 import unittest

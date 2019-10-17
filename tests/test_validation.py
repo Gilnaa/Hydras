@@ -5,7 +5,7 @@ Contains tests for validation feature.
 :file: ValidationTests.py
 :date: 28/01/2016
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 from hydras import *
 import unittest

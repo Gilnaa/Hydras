@@ -5,7 +5,7 @@ This file tests the libraries ability to cope with Python3.
 :file: Python3Tests.py
 :date: 05/02/2016
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 
 import unittest

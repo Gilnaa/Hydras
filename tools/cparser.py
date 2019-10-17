@@ -10,7 +10,7 @@ Tested against version 3.8.
 :file: cparser.py
 :date: 09/06/2016
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 
 import sys

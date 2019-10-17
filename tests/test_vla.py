@@ -5,7 +5,7 @@ Contains tests for the variable length array.
 :file: VLA.py
 :date: 22/03/2018
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 
 from hydras import *

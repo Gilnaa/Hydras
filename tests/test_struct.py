@@ -5,7 +5,7 @@ Contains various tests for the `Struct` class of the base module.
 :file: StructTests.py
 :date: 30/08/2015
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 import unittest
 from hydras import *

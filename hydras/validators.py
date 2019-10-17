@@ -4,7 +4,7 @@ Contains the validation components of this library.
 :file: validators.py
 :date: 15/09/2015
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 
 from .utils import *

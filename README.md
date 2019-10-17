@@ -6,42 +6,53 @@ somewhat similar to how C does it with a struct.
 
 Why "Hydras"? `Hydra` was taken.
 
+Hydras versions up to (and including) `v2.*` supported both Python2 and Python3.
+Newer version dropped Python2 support entirely.
 
 ## Example ##
 ```python
+from hydras import *
+
+
+class Opcodes(EnumClass):
+    KeepAlive = 3
+    Data = 15
+
 class Header(Struct):
-  Opcode = uint8_t(4)       # The `opcode`'s default value will now be `4`
-  DataLength = uint32_t()
+    opcode = Opcodes(type_formatter=uint8_t)
+    data_length = uint32_t
 
 class DataPacket(Struct):
-  # A nested structure. "DataLength = 128" sets the default DataLength value for `Header`s inside `DataPacket`s
-  Header = Header(DataLength=128)
-  # Creates an array of bytes with a length of 128 bytes.
-  Payload = Array(length = 128)
+    # A nested structure. "DataLength = 128" sets the default DataLength value for `Header`s inside `DataPacket`s
+    header = Header(opcode=Opcodes.Data, data_length=128)
 
-  # To override the constructor it must be able to override the default ctor (1 argument)
-  def __init__(self, opcode=0):
-    # Must call the base ctor
-    super(DataPacket, self).__init__()
-    self.Header.Opcode = opcode
+    # Creates an array of bytes with a length of 128 bytes.
+    payload = uint8_t[128]
+
+    # You can override the constructor, but you must keep
+    # an "overload" that receives no arguments.
+    def __init__(self, payload=None):
+        # Must call the base ctor in order to initialize the data members
+        super(DataPacket, self).__init__()
+        if payload is not None:
+            self.payload = payload
+            self.header.data_length = len(payload)
 
 if __name__ == '__main__':
-  packet = DataPacket()
-  # After you create the object, you can ignore the formatting rules, and assign the data directly to the properties.
-  packet.Header.Opcode = DATAPACKET_OPCODE
+    packet = DataPacket()
+    
+    # You can transform the object into a byte string using the `serialize` method.
+    zeroes = packet.serialize()  # => b'\x0f\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+    
+    # You can also modify the object naturally.
+    packet.payload = bytes(range(128))
+    saw_tooth = packet.serialize()  # => b'\x0f\x80\x00\x00\x00\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\x7f'
 
-  # You can transform the object into a byte string using the `serialize` method.
-  data_to_send = packet.serialize() # => b'\x04\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00...'
-  some_socket.send(data_to_send)
+    # . . .
 
-  packet.Payload = '\xFF' * 128
-  data_to_send = packet.serialize() # => b'\x04\x80\x00\x00\x00\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF...'
-
-  # . . .
-
-  # You can parse raw byte strings into an object using the deserialize class method.
-  received_data = some_socket.recv(len(packet))
-  parsed_packet = DataPacket.deserialize(received_data)
+    # You can parse raw byte strings into an object using the deserialize class method.
+    received_data = some_socket.recv(len(packet))
+    parsed_packet = DataPacket.deserialize(received_data)
 ```
 
 You can find more examples in the examples directory.
@@ -55,31 +66,17 @@ In the core of the library, there are two types of objects: `Serializer` and `St
 The developer can thus declare a class using the following notation:
 ```python
 class <StructName>(Struct):
-  <member_name> = <TypeClass>(<default_value>)
+    <member_name> = <TypeClass>(<default_value>)
 ```
-or
+Fl
+For example:
 ```python
 class Message(Struct):
-  TimeOfDay = uint64_t      # This creates a u64 formatter. Parentheses are optional.
-  DataLength = uint8_t(128)   # A default value is optional
+  TimeOfDay = uint64_t          # This creates a u64 formatter. Parentheses are optional.
+  DataLength = uint8_t(128)     # A default value is optional
 
 Message().serialize() #=> b'\x00\x00\x00\x00\x00\x00\x00\x00\x80'
 ```
-
-The declared data members are in fact (due to python's syntax), static.
-When a class object is created, the constructor (deep) copies each of the formatters' `default_value`s into an instance variable in the same name,
-so some transparency is achieved by "tricking" the user into thinking no formatters are involved:
-```
-Class members:
-  TimeOfDay:  uint64_t (default_value = 0)
-  DataLength: uint8_t  (default_value = 128)
-Object members:
-  TimeOfDay:  0
-  DataLength: 128
-```
-
-When the object is serialized, the object's data is cross-referenced with the class's formatters.
-All of the integers are internally converted using python's `struct.pack` function.
 
 ## Validators ##
 A validator object can be assigned to a struct data member to define validation rules.

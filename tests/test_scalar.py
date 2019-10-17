@@ -5,7 +5,7 @@ This file contains tests for the "Scalar" type formatters.
 :file: ScalarsTests.py
 :date: 29/08/2015
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 
 import unittest

@@ -5,7 +5,7 @@ This example shows the usage of the Offset feature class.
 :file: offset.py
 :date: 09/03/2016
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 
 from hydras import *

@@ -4,7 +4,7 @@ Contains non-trivial type formatters.
 :file:  vectors.py
 :date:  27/08/2015
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 
 from .base import *

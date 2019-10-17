@@ -5,7 +5,7 @@ Contains a more natural enum implementation.
 
 :date: 10/06/2016
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 
 from .base import *

@@ -4,7 +4,7 @@ Contains the bitfield type formatter implementation.
 :file: bitfield.py
 :date: 03/09/2015
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 
 import collections

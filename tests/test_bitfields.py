@@ -5,7 +5,7 @@ Contains tests for the bitfield type formatter.
 :file: BitFieldTests.py
 :date: 27/01/2016
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 from hydras import *
 import unittest

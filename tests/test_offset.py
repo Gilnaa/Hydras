@@ -5,7 +5,7 @@ Contains tests for the struct-offset feature.
 :file: OffsetTests.py
 :date: 10/03/2016
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 from hydras import *
 import unittest
