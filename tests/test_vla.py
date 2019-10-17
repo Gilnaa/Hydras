@@ -8,33 +8,26 @@ Contains tests for the variable length array.
     - Gilad Naaman <gilad@naaman.io>
 """
 
-from hydras import *
-import unittest
+from .utils import *
 
 
-class TestVLA(unittest.TestCase):
-    def setUp(self):
-        HydraSettings.push()
-        HydraSettings.endian = LittleEndian
-
-    def tearDown(self):
-        HydraSettings.pop()
+class TestVLA(HydrasTestCase):
 
     def test_default_value(self):
         # Default value should be the minimal length
         self.assertEqual(VariableArray(5, 7).default_value, (0, ) * 5)
 
     def test_vla_sizes(self):
-        a = VariableArray(1, 4, uint16_t)
+        a = VariableArray(1, 4, u16)
 
         # Assert the len(Formatter) issues the minimal length
-        self.assertEqual(len(a), len(uint16_t()))
+        self.assertEqual(len(a), len(u16()))
 
         # The "real" length should depend on the used value
-        self.assertEqual(a.get_actual_length([1]),              len(uint16_t()) * 1)
-        self.assertEqual(a.get_actual_length([1, 2]),           len(uint16_t()) * 2)
-        self.assertEqual(a.get_actual_length([1, 2, 3]),        len(uint16_t()) * 3)
-        self.assertEqual(a.get_actual_length([1, 2, 3, 4]),     len(uint16_t()) * 4)
+        self.assertEqual(a.get_actual_length([1]), len(u16()) * 1)
+        self.assertEqual(a.get_actual_length([1, 2]), len(u16()) * 2)
+        self.assertEqual(a.get_actual_length([1, 2, 3]), len(u16()) * 3)
+        self.assertEqual(a.get_actual_length([1, 2, 3, 4]), len(u16()) * 4)
 
     def test_vla_wrong_sizes_on_assignment(self):
         class FUBAR(Struct):
@@ -79,6 +72,3 @@ class TestVLA(unittest.TestCase):
             a.a = [0] * 18
 
         a.a = [0] * 5
-
-if __name__ == '__main__':
-    unittest.main()

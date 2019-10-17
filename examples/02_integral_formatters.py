@@ -15,37 +15,37 @@ import binascii
 
 class Showcase(Struct):
     """ A list of the available 'primitive' numeric types. """
-    unsigned_byte = uint8_t()
-    unsigned_word = uint16_t()
-    unsigned_dword = uint32_t()
-    unsigned_qword = uint64_t()
+    unsigned_byte = u8()
+    unsigned_word = u16()
+    unsigned_dword = u32()
+    unsigned_qword = u64()
 
-    signed_byte = int8_t()
-    signed_word = int16_t()
-    signed_dword = int32_t()
-    signed_qword = int64_t()
+    signed_byte = i8()
+    signed_word = i16()
+    signed_dword = i32()
+    signed_qword = i64()
 
-    single_float = Float()
-    double_float = Double()
+    single_float = f32()
+    double_float = f64()
 
 
 class StdintAliases(Struct):
     """ A bunch of aliases that looks like the typedefs from stdint.h"""
-    unsigned_byte = uint8_t()
-    unsigned_word = uint16_t()
-    unsigned_dword = uint32_t()
-    unsigned_qword = uint64_t()
+    unsigned_byte = u8()
+    unsigned_word = u16()
+    unsigned_dword = u32()
+    unsigned_qword = u64()
 
-    signed_byte = int8_t()
-    signed_word = int16_t()
-    signed_dword = int32_t()
-    signed_qword = int64_t()
+    signed_byte = i8()
+    signed_word = i16()
+    signed_dword = i32()
+    signed_qword = i64()
 
 
 class PrimitiveFeatures(Struct):
-    has_a_default_value = uint8_t(0x39)
-    big_endian = uint16_t(endian=BigEndian)
-    a_big_default = uint32_t(0xDEADBEEF, endian=BigEndian)
+    has_a_default_value = u8(0x39)
+    big_endian = u16_be
+    a_big_default = u32_be(0xDEADBEEF)
 
 
 if __name__ == '__main__':

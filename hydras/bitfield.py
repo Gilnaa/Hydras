@@ -41,7 +41,7 @@ class Bits(object):
 class BitField(Serializer):
     """ A type formatter class used to format a bitfield. """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, endian=None, *args, **kwargs):
         """
         Construct a new BitField object.
 
@@ -68,6 +68,8 @@ class BitField(Serializer):
 
         default_value = {name: self.bits[name].default_value for name in self.bits}
 
+        self._endian = endian or NativeEndian
+
         super(BitField, self).__init__(default_value, *args, **kwargs)
 
     def format(self, value, settings=None):
@@ -86,8 +88,7 @@ class BitField(Serializer):
         if len(unknown_keys) > 0:
             raise KeyError('Unknown bitfield field names: %s' % list(unknown_keys))
 
-        settings = self.resolve_settings(settings)
-        little_endian = is_little_endian(settings['endian'])
+        little_endian = is_little_endian(self._endian)
 
         bits = self.bits.items()
         if little_endian:
@@ -101,7 +102,7 @@ class BitField(Serializer):
             if name in value:
                 bit_value = value[name]
 
-            if settings['enforce_bitfield_size'] and (bit_value.bit_length() > bit_section.size):
+            if bit_value.bit_length() > bit_section.size:
                 raise ValueError('Bitfield value %u exceeds maximum bit size. ("%s": %u bits)' %
                                  (bit_value, name, bit_section.size))
 
@@ -131,8 +132,7 @@ class BitField(Serializer):
         :param settings:    Optional deserialization settings.
         :return:            A dictionary mapping bit-fields names to values.
         """
-        settings = self.resolve_settings(settings)
-        little_endian = is_little_endian(settings['endian'])
+        little_endian = is_little_endian(self._endian)
         bits = self.bits.items()
 
         if little_endian:

@@ -33,8 +33,8 @@ UNSIGNED_TYPES = [
     TypeKind.ULONGLONG
 ]
 
-HYDRA_FLOAT = 'Float'
-HYDRA_DOUBLE = 'Double'
+HYDRA_FLOAT = 'float32_t'
+HYDRA_DOUBLE = 'float64_t'
 UNSIGNED_HYDRA_TYPES = {
     8: 'uint8_t',
     16: 'uint16_t',

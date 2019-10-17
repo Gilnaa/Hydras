@@ -7,19 +7,11 @@ Contains tests for the bitfield type formatter.
 :authors:
     - Gilad Naaman <gilad@naaman.io>
 """
-from hydras import *
-import unittest
+from .utils import *
 
 
-class BitFieldTests(unittest.TestCase):
+class BitFieldTests(HydrasTestCase):
     """ A testcase for testing the BitField formatter. """
-
-    def setUp(self):
-        HydraSettings.push()
-        HydraSettings.endian = LittleEndian
-
-    def tearDown(self):
-        HydraSettings.pop()
 
     def test_bitfield_user_facing_value(self):
         """ Test the "default value" of the bitfield. """
@@ -46,12 +38,7 @@ class BitFieldTests(unittest.TestCase):
         """
         with self.assertRaises(ValueError):
             bitfield = BitField(first=Bits(1))
-            bitfield.format({'first': 2}, {'enforce_bitfield_size', True})
-
-        try:
-            bitfield.format({'first': 2}, {'enforce_bitfield_size': False})
-        except ValueError:
-            self.fail("ValueError was raised from a non-enforcing bitfield.")
+            bitfield.format({'first': 2})
 
     def test_bitfield_little_endian(self):
         """ Test output values for LittleEndian. """
@@ -75,14 +62,12 @@ class BitFieldTests(unittest.TestCase):
 
         tests = {
             # Size: 16 bits => 2 bytes.
-            BitField(i=Bits(5, 31), j=Bits(11)):                    b"\xF8\x00",
-            BitField(i=Bits(5, 29), j=Bits(11, 1020)):              b"\xEB\xFC",
+            BitField(endian=BigEndian, i=Bits(5, 31), j=Bits(11)):                    b"\xF8\x00",
+            BitField(endian=BigEndian, i=Bits(5, 29), j=Bits(11, 1020)):              b"\xEB\xFC",
             # Size: 17 bits => 3 bytes (due to padding).
-            BitField(i=Bits(6, 28), j=Bits(3, 5), k=Bits(8, 7)):    b"\x72\x83\x80",
-            BitField(i=Bits(6, 63), j=Bits(3, 0), k=Bits(8, 15)):   b"\xFC\x07\x80",
+            BitField(endian=BigEndian, i=Bits(6, 28), j=Bits(3, 5), k=Bits(8, 7)):    b"\x72\x83\x80",
+            BitField(endian=BigEndian, i=Bits(6, 63), j=Bits(3, 0), k=Bits(8, 15)):   b"\xFC\x07\x80",
         }
-
-        HydraSettings.endian = BigEndian
 
         for bitfield, result in tests.items():
             # Test serialization

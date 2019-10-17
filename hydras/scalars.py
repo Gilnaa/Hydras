@@ -13,10 +13,9 @@ import struct
 
 
 class Scalar(Serializer):
-
     """ Provides a handy base class for primitive-value formatters. """
 
-    def __init__(self, format_string, default_value=0, endian=None, *args, **kwargs):
+    def __init__(self, default_value=0, *args, **kwargs):
         """
         Initialize the scalar object.
 
@@ -24,116 +23,62 @@ class Scalar(Serializer):
         :param default_value:   The default value of this formatter.
         :param endian:          The endian of this formatter.
         """
-        settings = {}
-        self.format_string = format_string
-        if endian is not None:
-            settings['endian'] = endian
-
         self.validate_assignment(default_value)
 
-        super(Scalar, self).__init__(default_value, settings=settings, *args, **kwargs)
+        super(Scalar, self).__init__(default_value, *args, **kwargs)
 
     def validate_assignment(self, value):
         # Try to pack the value. An exception will be raised if the the value is too big.
-
-        if isinstance(value, str) or isinstance(value, bytes):
-            return
-
         try:
-            struct.pack(self.format_string, value)
+            struct.pack(self._fmt, value)
         except struct.error:
             raise ValueError("Value out of type bounds")
 
     def format(self, value, settings=None):
-        if isinstance(value, (str, bytes)):
-            if len(value) != len(self):
-                raise ValueError('Got formatted data with invalid length')
-            return value
-
-        endian = self.resolve_settings(settings)['endian']
-        return struct.pack(endian + self.format_string, value)
+        return struct.pack(self._fmt, value)
 
     def parse(self, raw_data, settings=None):
-        endian = self.resolve_settings(settings)['endian']
-        return struct.unpack(endian + self.format_string, string2bytes(raw_data))[0]
+        return struct.unpack(self._fmt, string2bytes(raw_data))[0]
 
     def __len__(self):
         return len(self.format(0))
 
-
-class uint8_t(Scalar):
-    """ An 8 bits long unsigned integer. """
-
-    def __init__(self, *args, **kwargs):
-        super(uint8_t, self).__init__('B', *args, **kwargs)
+    # This declaration exists just to satisfy IDEs and is overriden by the real format string
+    _fmt = None
 
 
-class int8_t(Scalar):
-    """ An 8 bits long signed integer. """
+# Native endian scalars
+u8 = type('uint8_t', (Scalar,), {'_fmt': '=B'})
+i8 = type('int8_t', (Scalar,), {'_fmt': '=b'})
+u16 = type('uint16_t', (Scalar,), {'_fmt': '=H'})
+i16 = type('int16_t', (Scalar,), {'_fmt': '=h'})
+u32 = type('uint32_t', (Scalar,), {'_fmt': '=I'})
+i32 = type('int32_t', (Scalar,), {'_fmt': '=i'})
+u64 = type('uint64_t', (Scalar,), {'_fmt': '=Q'})
+i64 = type('int64_t', (Scalar,), {'_fmt': '=q'})
+f32 = type('float32_t', (Scalar,), {'_fmt': '=f'})
+f64 = type('float64_t', (Scalar,), {'_fmt': '=d'})
 
-    def __init__(self, *args, **kwargs):
-        super(int8_t, self).__init__('b', *args, **kwargs)
+# Big-endian scalars
+u8_be = type('be_uint8_t', (Scalar,), {'_fmt': '>B'})
+i8_be = type('be_int8_t', (Scalar,), {'_fmt': '>b'})
+u16_be = type('be_uint16_t', (Scalar,), {'_fmt': '>H'})
+i16_be = type('be_int16_t', (Scalar,), {'_fmt': '>h'})
+u32_be = type('be_uint32_t', (Scalar,), {'_fmt': '>I'})
+i32_be = type('be_int32_t', (Scalar,), {'_fmt': '>i'})
+u64_be = type('be_uint64_t', (Scalar,), {'_fmt': '>Q'})
+i64_be = type('be_int64_t', (Scalar,), {'_fmt': '>q'})
+f32_be = type('be_float32_t', (Scalar,), {'_fmt': '>f'})
+f64_be = type('be_float64_t', (Scalar,), {'_fmt': '>d'})
 
-
-class uint16_t(Scalar):
-    """ A 16 bits long unsigned integer. """
-
-    def __init__(self, *args, **kwargs):
-        super(uint16_t, self).__init__('H', *args, **kwargs)
-
-
-class int16_t(Scalar):
-    """ A 16 bits long signed integer. """
-
-    def __init__(self, *args, **kwargs):
-        super(int16_t, self).__init__('h', *args, **kwargs)
-
-
-class uint32_t(Scalar):
-    """ A 32 bits long unsigned integer. """
-
-    def __init__(self, *args, **kwargs):
-        super(uint32_t, self).__init__('I', *args, **kwargs)
-
-
-class int32_t(Scalar):
-    """ A 32 bits long signed integer. """
-
-    def __init__(self, *args, **kwargs):
-        super(int32_t, self).__init__('i', *args, **kwargs)
-
-
-class uint64_t(Scalar):
-    """ A 64 bits long unsigned integer. """
-
-    def __init__(self, *args, **kwargs):
-        super(uint64_t, self).__init__('Q', *args, **kwargs)
-
-
-class int64_t(Scalar):
-    """ A 64 bits long signed integer. """
-
-    def __init__(self, *args, **kwargs):
-        super(int64_t, self).__init__('q', *args, **kwargs)
-
-
-class Float(Scalar):
-    """
-    A 32 bits long floating point number.
-
-    The value will be serialized using the 'IEEE 754 binary32' format
-    """
-
-    def __init__(self, *args, **kwargs):
-        super(Float, self).__init__('f', *args, **kwargs)
-
-
-class Double(Scalar):
-    """
-    A 64 bits long floating point number.
-
-    The value will be serialized using the 'IEEE 754 binary64' format
-    """
-
-    def __init__(self, *args, **kwargs):
-        super(Double, self).__init__('d', *args, **kwargs)
+# Little-endian scalars
+u8_le = type('le_uint8_t', (Scalar,), {'_fmt': '<B'})
+i8_le = type('le_int8_t', (Scalar,), {'_fmt': '<b'})
+u16_le = type('le_uint16_t', (Scalar,), {'_fmt': '<H'})
+i16_le = type('le_int16_t', (Scalar,), {'_fmt': '<h'})
+u32_le = type('le_uint32_t', (Scalar,), {'_fmt': '<I'})
+i32_le = type('le_int32_t', (Scalar,), {'_fmt': '<i'})
+u64_le = type('le_uint64_t', (Scalar,), {'_fmt': '<Q'})
+i64_le = type('le_int64_t', (Scalar,), {'_fmt': '<q'})
+f32_le = type('le_float32_t', (Scalar,), {'_fmt': '<f'})
+f64_le = type('le_float64_t', (Scalar,), {'_fmt': '<d'})

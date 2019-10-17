@@ -78,7 +78,7 @@ class EnumClass(Serializer, metaclass=EnumClassMeta):
     """ An enum formatter that can be shared between structs. """
     def __init__(self, default_value=None, type_formatter=None, *args, **kwargs):
         self.enum_literals = collections.OrderedDict()
-        self.formatter = get_as_value(type_formatter or uint32_t)
+        self.formatter = get_as_value(type_formatter or u32)
 
         # Validate the default_value
         if default_value is None:

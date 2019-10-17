@@ -7,8 +7,8 @@ Contains various tests for the `Struct` class of the base module.
 :authors:
     - Gilad Naaman <gilad@naaman.io>
 """
-import unittest
-from hydras import *
+
+from .utils import *
 
 #########################
 # "Structs" for testing #
@@ -16,40 +16,28 @@ from hydras import *
 
 
 class SmallStruct(Struct):
-    only_element = uint8_t
+    only_element = u8
 
 
 class SimpleStruct(Struct):
-    b_first_variable = uint8_t(0xDE)
-    a_second_variable = uint16_t(0xCAFE)
-    x_third_variable = uint8_t(0xAD)
+    b_first_variable = u8(0xDE)
+    a_second_variable = u16(0xCAFE)
+    x_third_variable = u8(0xAD)
 
 
 class ComplicatedStruct(Struct):
     other_struct = SmallStruct
     some_field = SimpleStruct[3]
-    numeric = uint32_t
+    numeric = u32
 
-
-class BigEndianStruct(Struct):
-    settings = {'endian': BigEndian}
-
-    hello_i_am_trapped_in_a_variable_factory_please_help_theyre_going_to_ = uint16_t(0xFF00)
 
 ##############
 # Test Cases #
 ##############
 
 
-class StructTests(unittest.TestCase):
+class StructTests(HydrasTestCase):
     """ A testcase checking for a few of `Struct`'s features. """
-    
-    def setUp(self):
-        HydraSettings.push()
-        HydraSettings.endian = LittleEndian
-
-    def tearDown(self):
-        HydraSettings.pop()
 
     def test_serialize_simple(self):
         """ Test serialization of a simple struct. """
@@ -68,14 +56,6 @@ class StructTests(unittest.TestCase):
         # Test deserialization.
         d_s = ComplicatedStruct.deserialize(data)
         self.assertEqual(d_s, s)
-
-    def test_big_endian_struct(self):
-        """ Test the struct-wide settings of a struct and their serialization overrides."""
-        big_endian_struct = BigEndianStruct()
-        self.assertEqual(big_endian_struct.serialize(), b'\xFF\x00')
-
-        # Force little endian
-        self.assertEqual(big_endian_struct.serialize({'endian': LittleEndian}), b'\x00\xFF')
     
     def test_dict_conversion(self):
         d = dict(ComplicatedStruct())

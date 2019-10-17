@@ -51,7 +51,7 @@ class Array(Serializer):
     The default value's type is a byte (uint8_t), but can subtituted for any Struct or Scalar.
     """
 
-    def __init__(self, length, items_type=uint8_t, default_value=None, *args, **kwargs):
+    def __init__(self, length, items_type=u8, default_value=None, *args, **kwargs):
         """
         Initialize this Array object.
 
@@ -153,7 +153,7 @@ class VariableArray(Serializer):
     The default value's type is a byte (uint8_t), but can subtituted for any Struct or Scalar.
     """
 
-    def __init__(self, min_length, max_length, items_type=uint8_t, default_value=None, *args, **kwargs):
+    def __init__(self, min_length, max_length, items_type=u8, default_value=None, *args, **kwargs):
         """
         Initialize this Array object.
 

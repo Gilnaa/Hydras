@@ -23,13 +23,13 @@ class Opcodes(EnumClass):
 class AnotherHeader(Struct):
     opcode = Opcodes
     different_default = Opcodes(Opcodes.Data)
-    smaller_opcode = Opcodes(type_formatter=uint8_t)
-    timestamp = uint64_t
+    smaller_opcode = Opcodes(type_formatter=u8)
+    timestamp = u64
 
 
 class ThirdHeader(Struct):
     opcode = Opcodes
-    useless_variable = uint8_t[3]
+    useless_variable = u8[3]
 
 
 if __name__ == '__main__':

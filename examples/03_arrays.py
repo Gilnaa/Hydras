@@ -14,13 +14,13 @@ import binascii
 
 
 class SmallStruct(Struct):
-    a = uint8_t(0xAA)
-    b = uint8_t(0xFF)
+    a = u8(0xAA)
+    b = u8(0xFF)
 
 
 class HasArraysInIt(Struct):
     byte_array = Array(8)
-    dword_array = uint32_t[2]
+    dword_array = u32[2]
     object_array = SmallStruct[4]
 
 

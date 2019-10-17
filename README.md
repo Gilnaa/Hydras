@@ -19,21 +19,22 @@ class Opcodes(EnumClass):
     Data = 15
 
 class Header(Struct):
-    opcode = Opcodes(type_formatter=uint8_t)
-    data_length = uint32_t
+    opcode = Opcodes(type_formatter=u8)
+    data_length = u32
 
 class DataPacket(Struct):
     # A nested structure. "DataLength = 128" sets the default DataLength value for `Header`s inside `DataPacket`s
     header = Header(opcode=Opcodes.Data, data_length=128)
 
     # Creates an array of bytes with a length of 128 bytes.
-    payload = uint8_t[128]
+    payload = u8[128]
 
-    # You can override the constructor, but you must keep
-    # an "overload" that receives no arguments.
-    def __init__(self, payload=None):
+    # You can override the constructor, but you must keep an "overload" that receives no arguments.
+    # Even without this being defined, the class could have been used the same: `DataPacket(payload=...)`
+    # This constructor also sets the `data_length` property
+    def __init__(self, payload=None, *args, **kwargs):
         # Must call the base ctor in order to initialize the data members
-        super(DataPacket, self).__init__()
+        super(DataPacket, self).__init__(*args, **kwargs)
         if payload is not None:
             self.payload = payload
             self.header.data_length = len(payload)
@@ -60,20 +61,26 @@ You can find more examples in the examples directory.
 ## How does it work? ##
 In the core of the library, there are two types of objects: `Serializer` and `Struct`.
 
-`Serializer` is a formatting object, and can parse and format values of a specified type.
-`Struct` is a structure object, which enables you to define rules for object serialization.
+`Serializer` is an object that can convert between common python objects (e.g. `int` and `float`) and to and from `bytes`.
+`Serializer`s are mostly supplied by the library, but can also be written by the user.
 
-The developer can thus declare a class using the following notation:
+A simple example of a `Serializer` is `u8`; a more complex example is `EnumClass` which requires more user involvement.
+
+`Struct` is an aggregate of named members, where each has a concrete type associated with it (which is either a `Serializer` or another `Struct`).
+
+`Struct`s are always defined by the user.
+
+The developer can thus declare a struct using the following notation:
 ```python
 class <StructName>(Struct):
-    <member_name> = <TypeClass>(<default_value>)
+    <member_name> = <StructType|SerializerType>(<default_value>)
 ```
-Fl
+
 For example:
 ```python
 class Message(Struct):
-  TimeOfDay = uint64_t          # This creates a u64 formatter. Parentheses are optional.
-  DataLength = uint8_t(128)     # A default value is optional
+  TimeOfDay = u64          # This creates a u64 formatter. Parentheses are optional.
+  DataLength = u8(128)     # A default value is optional
 
 Message().serialize() #=> b'\x00\x00\x00\x00\x00\x00\x00\x00\x80'
 ```

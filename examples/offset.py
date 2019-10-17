@@ -14,15 +14,15 @@ from binascii import hexlify
 
 # A simple struct that will be used for the example
 class A(Struct):
-    a = uint8_t(1)
-    b = uint8_t(2)
-    c = uint8_t(3)
-    d = uint8_t(4)
-    e = uint8_t(5)
-    f = uint8_t(6)
-    g = uint8_t(7)
-    h = uint8_t(8)
-    i = uint8_t(9)
+    a = u8(1)
+    b = u8(2)
+    c = u8(3)
+    d = u8(4)
+    e = u8(5)
+    f = u8(6)
+    g = u8(7)
+    h = u8(8)
+    i = u8(9)
 
 
 if __name__ == '__main__':

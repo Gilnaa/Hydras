@@ -9,8 +9,7 @@ This file contains tests for the 'EnumClass' type formatter.
     - Gilad Naaman <gilad@naaman.io>
 """
 
-import unittest
-from hydras import *
+from .utils import *
 
 
 class EOpcodeThingie(EnumClass):
@@ -22,21 +21,14 @@ class EOpcodeThingie(EnumClass):
 
 class StructThingie(Struct):
     opcode = EOpcodeThingie
-    pad = uint8_t(0xFF)
+    pad = u8(0xFF)
 
 
 class StructStuff(Struct):
-    opcode = EOpcodeThingie(type_formatter=uint8_t)
+    opcode = EOpcodeThingie(type_formatter=u8)
 
 
-class EnumClassTests(unittest.TestCase):
-    def setUp(self):
-        HydraSettings.push()
-        HydraSettings.endian = LittleEndian
-
-    def tearDown(self):
-        HydraSettings.pop()
-
+class EnumClassTests(HydrasTestCase):
     def test_enum_class(self):
         s = StructThingie()
 
@@ -63,7 +55,7 @@ class EnumClassTests(unittest.TestCase):
         self.assertEqual(s.serialize(), b'\x0b')
 
     def test_format_options(self):
-        f = EOpcodeThingie(type_formatter=uint8_t)
+        f = EOpcodeThingie(type_formatter=u8)
         self.assertEqual(f.format(0), b'\x00')
         self.assertEqual(f.format(1), b'\x01')
         self.assertEqual(f.format(10), b'\x0a')
@@ -83,7 +75,7 @@ class EnumClassTests(unittest.TestCase):
             f.format('e')
 
     def test_parse_options(self):
-        f = EOpcodeThingie(type_formatter=uint8_t)
+        f = EOpcodeThingie(type_formatter=u8)
         self.assertEqual(0, f.parse('\x00'))
         self.assertEqual(10, f.parse('\x0A'))
 

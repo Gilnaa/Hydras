@@ -7,10 +7,10 @@ from hydras import *
 
 
 class ControlPacket(Struct):
-    first_member = uint16_t(0xAABB)
+    first_member = u16(0xAABB)
     # You can control the endian settings of a single variable
-    second_member = uint16_t(0xCCDD, endian=BigEndian)
-    third_member = uint16_t(0xEEFF)
+    second_member = u16_be(0xCCDD)
+    third_member = u16(0xEEFF)
 
 
 if __name__ == '__main__':

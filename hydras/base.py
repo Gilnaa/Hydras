@@ -32,12 +32,6 @@ class HydraSettings(object):
     # Determines whether the object will be validated on serialize.
     validate_on_serialize = False
 
-    # The endian to use.
-    endian = NativeEndian
-
-    # Determines whether the size of the bitfield's fields will be enforced.
-    enforce_bitfield_size = True
-
     # Determines whether parsed enum literals have to be part of the enum.
     strong_enum_literals = True
 
@@ -46,8 +40,6 @@ class HydraSettings(object):
 
     # When True and `render_enums_as_integers == False`, renders enum literals as "EnumName.LiteralName"
     full_enum_names = True
-
-    __snapshot_stack__ = []
 
     @classmethod
     def resolve(cls, *args):
@@ -81,16 +73,6 @@ class HydraSettings(object):
                 setattr(cls, var, value)
 
         return cls.snapshot()
-
-    @classmethod
-    def push(cls):
-        """ Take a snapshot of HydraSettings and save it in the snapshot stack. """
-        cls.__snapshot_stack__.append(cls.snapshot())
-
-    @classmethod
-    def pop(cls):
-        """ Restores the settings of the latest snapshot. """
-        cls.update(cls.__snapshot_stack__.pop())
 
 
 class SerializerMeta(type):
@@ -174,7 +156,7 @@ class Serializer(metaclass=SerializerMeta):
     def __getitem__(self, item_count):
         """
         This hack enables the familiar array syntax: `type()[count]`.
-        For example, a 3-item array of type uint16_t might look like `uint16_t(endian=BigEndian)[3]`.
+        For example, a 3-item array of type uint16_t might look like `uint16_t(default_value=5)[3]`.
         """
         # Importing locally in order to avoid weird import-cycle issues
         from .vectors import Array
@@ -191,6 +173,8 @@ class StructMeta(type):
                 elif inspect.isclass(fmt) and issubclass(fmt, Serializer):
                     members.append((member_name, fmt()))
                     attributes[member_name] = fmt()
+                # We want to check if `fmt` is either a subclass of `Struct` or an instance of such type
+                # but `Struct` is not a valid identifier at this point.
                 elif issubclass(type(fmt), StructMeta) or issubclass(type(type(fmt)), StructMeta):
                     members.append((member_name, NestedStruct(fmt)))
                     attributes[member_name] = NestedStruct(fmt)
@@ -222,7 +206,7 @@ class StructMeta(type):
     def __getitem__(self, item_count):
         """
         This hack enables the familiar array syntax: `type()[count]`.
-        For example, a 3-item array of type uint16_t might look like `uint16_t(endian=BigEndian)[3]`.
+        For example, a 3-item array of type uint16_t might look like `uint16_t(default_value=5)[3]`.
         """
         # Importing locally in order to avoid weird import-cycle issues
         from .vectors import Array
@@ -448,7 +432,7 @@ class Struct(metaclass=StructMeta):
     def __getitem__(self, item_count):
         """
         This hack enables the familiar array syntax: `type()[count]`.
-        For example, a 3-item array of type uint16_t might look like `uint16_t(endian=BigEndian)[3]`.
+        For example, a 3-item array of type uint16_t might look like `uint16_t(default_value=5)[3]`.
         """
         # Importing locally in order to avoid weird import-cycle issues
         from .vectors import Array

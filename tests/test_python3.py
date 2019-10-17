@@ -8,22 +8,14 @@ This file tests the libraries ability to cope with Python3.
     - Gilad Naaman <gilad@naaman.io>
 """
 
-import unittest
-from hydras import *
+from .utils import *
 
 
 class Sample(Struct):
-    member = uint32_t()
+    member = u32()
 
 
-class TestPytjon3(unittest.TestCase):
-    def setUp(self):
-        HydraSettings.push()
-        HydraSettings.endian = LittleEndian
-
-    def tearDown(self):
-        HydraSettings.pop()
-
+class TestPython3(HydrasTestCase):
     def test_bytes_object(self):
         """ Tests the deserialize function works with both strings and bytes. """
         data_str = '\x00\x00\x00\x32'
@@ -39,6 +31,3 @@ class TestPytjon3(unittest.TestCase):
         self.assertEqual(type(serialized_bytes), bytes)
 
         self.assertEqual(serialized_str, serialized_bytes)
-
-if __name__ == '__main__':
-    unittest.main()

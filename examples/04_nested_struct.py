@@ -14,8 +14,8 @@ import binascii
 
 
 class SomeHeader(Struct):
-    opcode = uint32_t()
-    timestamp = uint64_t()
+    opcode = u32()
+    timestamp = u64()
 
 
 class SomePacket(Struct):

@@ -20,8 +20,8 @@ class DynamicStruct(Struct):
     """
 
     # Data members.
-    index = uint32_t()
-    even_message = uint8_t()
+    index = u32()
+    even_message = u8()
 
     # Hooks.
     def after_serialize(self):
