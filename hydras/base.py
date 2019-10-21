@@ -358,10 +358,11 @@ class Struct(StructBase):
         """ Get the length of the struct. """
         length = self._metadata['length']
 
-        name, last_member = self._metadata['members'][-1]
-        if not last_member.is_constant_size():
-            length -= len(last_member)
-            length += last_member.get_actual_length(vars(self)[name])
+        if len(self._metadata['members']) > 0:
+            name, last_member = self._metadata['members'][-1]
+            if not last_member.is_constant_size():
+                length -= len(last_member)
+                length += last_member.get_actual_length(vars(self)[name])
 
         return length
 
