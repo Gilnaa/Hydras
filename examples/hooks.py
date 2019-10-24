@@ -7,8 +7,9 @@ This example demonstrates how to implement several of `Struct`'s hooks.
 :authors:
     - Gilad Naaman <gilad@naaman.io>
 """
-
+import binascii
 from hydras import *
+
 
 class DynamicStruct(Struct):
     """ 
@@ -20,8 +21,8 @@ class DynamicStruct(Struct):
     """
 
     # Data members.
-    index = u32()
-    even_message = u8()
+    index = u32
+    even_message = u8
 
     # Hooks.
     def after_serialize(self):
@@ -43,16 +44,10 @@ class DynamicStruct(Struct):
         return True
 
 
-def print_raw_data(raw_data):
-    for byte in raw_data:
-        print('%02x' % ord(byte),)
-    print()
-
-
 if __name__ == '__main__':
     s = DynamicStruct()
     for i in range(5):
-        print_raw_data(s.serialize())
+        print(binascii.hexlify(s.serialize()))
     # Output:
     #   00 00 00 00 00
     #   01 00 00 00 01

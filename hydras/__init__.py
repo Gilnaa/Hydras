@@ -10,17 +10,13 @@ A catch-all file that imports the whole framework.
 # Core classes.
 from .base import *
 
-# Type formatters.
+# Serializers
 from .scalars import *
-from .vectors import *
+# Only import Pad because the rest have a dedicated syntax
+from .vectors import Pad
 from .enum_class import *
 from .bitfield import *
 from .union import *
 
 # Misc.
 from .validators import *
-
-Float = f32
-Double = f64
-
-VLA = VariableArray

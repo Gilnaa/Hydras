@@ -62,11 +62,11 @@ class BitFieldTests(HydrasTestCase):
 
         tests = {
             # Size: 16 bits => 2 bytes.
-            BitField(endian=BigEndian, i=Bits(5, 31), j=Bits(11)):                    b"\xF8\x00",
-            BitField(endian=BigEndian, i=Bits(5, 29), j=Bits(11, 1020)):              b"\xEB\xFC",
+            BitField(endian=Endianness.BIG, i=Bits(5, 31), j=Bits(11)):                    b"\xF8\x00",
+            BitField(endian=Endianness.BIG, i=Bits(5, 29), j=Bits(11, 1020)):              b"\xEB\xFC",
             # Size: 17 bits => 3 bytes (due to padding).
-            BitField(endian=BigEndian, i=Bits(6, 28), j=Bits(3, 5), k=Bits(8, 7)):    b"\x72\x83\x80",
-            BitField(endian=BigEndian, i=Bits(6, 63), j=Bits(3, 0), k=Bits(8, 15)):   b"\xFC\x07\x80",
+            BitField(endian=Endianness.BIG, i=Bits(6, 28), j=Bits(3, 5), k=Bits(8, 7)):    b"\x72\x83\x80",
+            BitField(endian=Endianness.BIG, i=Bits(6, 63), j=Bits(3, 0), k=Bits(8, 15)):   b"\xFC\x07\x80",
         }
 
         for bitfield, result in tests.items():

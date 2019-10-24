@@ -15,23 +15,23 @@ class TestVLA(HydrasTestCase):
 
     def test_default_value(self):
         # Default value should be the minimal length
-        self.assertEqual(VariableArray(5, 7).default_value, (0, ) * 5)
+        self.assertEqual(u8[5:7].default_value, (0, ) * 5)
 
     def test_vla_sizes(self):
-        a = VariableArray(1, 4, u16)
+        a = u16[1:4]
 
         # Assert the len(Formatter) issues the minimal length
-        self.assertEqual(len(a), len(u16()))
+        self.assertEqual(len(a), len(u16))
 
         # The "real" length should depend on the used value
-        self.assertEqual(a.get_actual_length([1]), len(u16()) * 1)
-        self.assertEqual(a.get_actual_length([1, 2]), len(u16()) * 2)
-        self.assertEqual(a.get_actual_length([1, 2, 3]), len(u16()) * 3)
-        self.assertEqual(a.get_actual_length([1, 2, 3, 4]), len(u16()) * 4)
+        self.assertEqual(a.get_actual_length([1]), len(u16) * 1)
+        self.assertEqual(a.get_actual_length([1, 2]), len(u16) * 2)
+        self.assertEqual(a.get_actual_length([1, 2, 3]), len(u16) * 3)
+        self.assertEqual(a.get_actual_length([1, 2, 3, 4]), len(u16) * 4)
 
     def test_vla_wrong_sizes_on_assignment(self):
         class FUBAR(Struct):
-            florp = VariableArray(1, 4)
+            florp = u8[1:4]
 
         nimrod_fucking_kaplan = FUBAR()
 
@@ -50,18 +50,18 @@ class TestVLA(HydrasTestCase):
     def test_vla_must_be_at_end_of_struct(self):
         # Positive case
         class Florp(Struct):
-            a = u8()
-            b = VariableArray(1, 15)
+            a = u8
+            b = u8[1:15]
 
         # Negative case
         with self.assertRaises(TypeError):
             class Blarg(Struct):
-                b = VariableArray(1, 15)
-                a = u8()
+                b = u8[1:15]
+                a = u8
 
     def test_vla_value_assignment_checks(self):
         class Florper(Struct):
-            a = VariableArray(4, 16)
+            a = u8[4:16]
 
         a = Florper()
 

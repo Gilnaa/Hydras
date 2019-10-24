@@ -21,7 +21,7 @@ class AckMessage(Struct):
 
 class DataFragmentMessage(Struct):
     Header = Header(Opcode=3, PayloadLength=1024)
-    Payload = Array(1024)
+    Payload = u8[1024]
 
 
 if __name__ == '__main__':

@@ -14,13 +14,13 @@ import binascii
 
 
 class SomeHeader(Struct):
-    opcode = u32()
-    timestamp = u64()
+    opcode = u32
+    timestamp = u64
 
 
 class SomePacket(Struct):
     header = NestedStruct(SomeHeader)
-    data = Array(12)
+    data = u8[12]
 
 
 if __name__ == '__main__':

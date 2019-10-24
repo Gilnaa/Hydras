@@ -41,7 +41,7 @@ class Bits(object):
 class BitField(Serializer):
     """ A type formatter class used to format a bitfield. """
 
-    def __init__(self, endian=None, *args, **kwargs):
+    def __init__(self, endian: Endianness = Endianness.TARGET, *args, **kwargs):
         """
         Construct a new BitField object.
 
@@ -68,7 +68,7 @@ class BitField(Serializer):
 
         default_value = {name: self.bits[name].default_value for name in self.bits}
 
-        self._endian = endian or NativeEndian
+        self._endian = endian
 
         super(BitField, self).__init__(default_value, *args, **kwargs)
 
@@ -88,7 +88,9 @@ class BitField(Serializer):
         if len(unknown_keys) > 0:
             raise KeyError('Unknown bitfield field names: %s' % list(unknown_keys))
 
-        little_endian = is_little_endian(self._endian)
+        settings = self.resolve_settings(settings)
+        endian = self._endian if self._endian != Endianness.TARGET else settings['target_endian']
+        little_endian = endian.is_equivalent_to_little_endian()
 
         bits = self.bits.items()
         if little_endian:
@@ -132,7 +134,9 @@ class BitField(Serializer):
         :param settings:    Optional deserialization settings.
         :return:            A dictionary mapping bit-fields names to values.
         """
-        little_endian = is_little_endian(self._endian)
+        settings = self.resolve_settings(settings)
+        endian = self._endian if self._endian != Endianness.TARGET else settings['target_endian']
+        little_endian = endian.is_equivalent_to_little_endian()
         bits = self.bits.items()
 
         if little_endian:

@@ -12,7 +12,7 @@ from .utils import *
 
 
 class Sample(Struct):
-    member = u32()
+    member = u32
 
 
 class TestPython3(HydrasTestCase):

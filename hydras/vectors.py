@@ -86,11 +86,11 @@ class Array(Serializer):
         # type is a Struct type/class.
         if issubclass(t, Struct):
             self.formatter = NestedStruct(items_type)
-            return tuple(t() if inspect.isclass(items_type) else copy.deepcopy(items_type) for i in range(length))
+            return [t() if inspect.isclass(items_type) else copy.deepcopy(items_type) for _ in range(length)]
         # type is a Scalar class.
         elif issubclass(t, Serializer):
             self.formatter = get_as_value(items_type)
-            return tuple(self.formatter.default_value for _ in range(length))
+            return [copy.deepcopy(self.formatter.default_value) for _ in range(length)]
         else:
             raise TypeError('Array: items_type should be a Serializer or a Struct')
 
@@ -141,8 +141,7 @@ class Array(Serializer):
         if len(value) > self.length:
             raise ValueError('Assigned array is too long.')
 
-        for i in value:
-            self.formatter.validate_assignment(i)
+        return all(self.formatter.validate_assignment(i) for i in value)
 
 
 class VariableArray(Serializer):
@@ -256,14 +255,7 @@ class VariableArray(Serializer):
             raise ValueError("Data is too long for serialization of VLA.")
 
         # Make sure each element in the collection is also valid according to `self.formatter`.
-        for i in value:
-            # When using Python 2, and `bytes = str`,
-            # the iteration emits single character strings instead of integers
-            if isinstance(i, str):
-                assert len(i) == 1
-                i = ord(i)
-
-            self.formatter.validate_assignment(i)
+        return all(self.formatter.validate_assignment(i) for i in value)
 
     def get_actual_length(self, value):
         return len(value) * len(self.formatter)

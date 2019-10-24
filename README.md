@@ -9,6 +9,14 @@ Why "Hydras"? `Hydra` was taken.
 Hydras versions up to (and including) `v2.*` supported both Python2 and Python3.
 Newer version dropped Python2 support entirely.
 
+## Roadmap ##
+This a list of features we want to implement before releasing Hydras 3.0
+
+ * BitFields should not be defined inline.
+ * Unions should not be defined inline.
+ * Non field properties (maybe?)
+ * Struct inheritance
+
 ## Example ##
 ```python
 from hydras import *

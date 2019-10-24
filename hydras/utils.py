@@ -9,6 +9,21 @@ Contains various utility methods.
 
 import struct
 import inspect
+import enum
+import sys
+
+
+class Endianness(enum.Enum):
+    BIG = '>'
+    LITTLE = '<'
+    HOST = '='
+    TARGET = None
+
+    def is_equivalent_to_little_endian(self):
+        return self == Endianness.LITTLE or (self == Endianness.HOST and sys.byteorder == 'little')
+
+    def is_equivalent_to_big_endian(self):
+        return self == Endianness.LITTLE or (self == Endianness.HOST and sys.byteorder == 'little')
 
 
 def fit_bytes_to_size(byte_string, length):
@@ -27,24 +42,6 @@ def fit_bytes_to_size(byte_string, length):
         return padto(byte_string, length)
 
     return byte_string[:length]
-
-
-def is_native_endian_little():
-    """ Determine whether the host machine's native endian is little or not. """
-    return struct.pack('@H', 0x00FF) == struct.pack('<H', 0x00FF)
-
-
-def is_native_endian_big():
-    """ Determine whether the host machine's native endian is big or not. """
-    return struct.pack('@H', 0x00FF) == struct.pack('>H', 0x00FF)
-
-
-def is_little_endian(endian):
-    """ Determine whether the give endian is little or not on the host machine. """
-    if endian == '<':
-        return True
-
-    return struct.pack(endian + 'H', 0x00FF) == struct.pack('<H', 0x00FF)
 
 
 def get_as_type(t):

@@ -9,15 +9,10 @@ Contains the core classes of the framework.
 
 import copy
 import collections
-from typing import Dict, Any
+from typing import Any, Dict, Type, Union as TypeUnion
 
 from .utils import *
 from .validators import *
-
-# `struct` endian definitions
-BigEndian = '>'
-LittleEndian = '<'
-NativeEndian = '='
 
 
 class HydraSettings(object):
@@ -29,9 +24,6 @@ class HydraSettings(object):
     # Determines whether the validate hook will be checked.
     validate = True
 
-    # Determines whether the object will be validated on serialize.
-    validate_on_serialize = False
-
     # Determines whether parsed enum literals have to be part of the enum.
     strong_enum_literals = True
 
@@ -40,6 +32,9 @@ class HydraSettings(object):
 
     # When True and `render_enums_as_integers == False`, renders enum literals as "EnumName.LiteralName"
     full_enum_names = True
+
+    # The endianness of the "target" CPU. By the default is the same as the host.
+    target_endian = Endianness.HOST
 
     @classmethod
     def resolve(cls, *args):
@@ -75,15 +70,36 @@ class HydraSettings(object):
         return cls.snapshot()
 
 
+def _create_array(size: TypeUnion[int, slice], underlying_type):
+    # Importing locally in order to avoid weird import-cycle issues
+    from .vectors import Array, VariableArray
+
+    assert isinstance(size, (int, slice)), 'Expected an int or a slice for array size'
+
+    if isinstance(size, int):
+        return Array(size, underlying_type)
+    elif isinstance(size, slice):
+        assert size.step is None, 'Cannot supply step as array size'
+        return VariableArray(size.start, size.stop, underlying_type)
+
+
 class SerializerMeta(type):
     def __getitem__(self, item_count):
         """
         This hack enables the familiar array syntax: `type[count]`.
         For example, a 3-item array of type uint8_t might look like `uint8_t[3]`.
         """
-        # Importing locally in order to avoid weird import-cycle issues
-        from .vectors import Array
-        return Array(item_count, self)
+        return _create_array(item_count, self)
+
+    def __len__(self):
+        """
+        Enables the user to call `len(type)`.
+        For example, `len(u32) == len(u32()) == 4`
+
+        This only works for serializers with a parameterless constructor,
+        but we have no user-facing serializers whose constructors require a parameter.
+        """
+        return len(self())
 
 
 class Serializer(metaclass=SerializerMeta):
@@ -117,7 +133,7 @@ class Serializer(metaclass=SerializerMeta):
         """
         Validate the given value using this formatters rules.
 
-        :param value:   The value to format.
+        :param value:   The value to validate.
         :return:        `True` if the value is valid; `False` otherwise.
         """
         if self.validator is not None:
@@ -143,7 +159,7 @@ class Serializer(metaclass=SerializerMeta):
 
     def validate_assignment(self, value):
         """ Validates a python value to make sure it is a sensible choice for this field. """
-        pass
+        return True
 
     def get_actual_length(self, value):
         """ When used on variable length formatters, returns the actual serialized length of the given python value. """
@@ -154,18 +170,14 @@ class Serializer(metaclass=SerializerMeta):
         raise NotImplementedError()
 
     def __getitem__(self, item_count):
-        """
-        This hack enables the familiar array syntax: `type()[count]`.
-        For example, a 3-item array of type uint16_t might look like `uint16_t(default_value=5)[3]`.
-        """
-        # Importing locally in order to avoid weird import-cycle issues
-        from .vectors import Array
-        return Array(item_count, self)
+        return _create_array(item_count, self)
 
 
 class StructMeta(type):
+    _hydras_metadata = None
+
     def __new__(cls, name, bases, attributes):
-        if not hasattr(cls, '_metadata') or cls._metadata['name'] != name:
+        if cls._hydras_metadata is None or cls._hydras_metadata['name'] != name:
             members = []
             for member_name, fmt in attributes.items():
                 if issubclass(type(fmt), Serializer):
@@ -193,30 +205,23 @@ class StructMeta(type):
             # Initialize a copy of the data properties.
             metadata['length'] = sum(len(get_as_value(v)) for _, v in metadata['members'])
 
-            setattr(cls, '_metadata', metadata)
-        attributes.update({'_metadata': cls._metadata})
+            setattr(cls, '_hydras_metadata', metadata)
+        attributes.update({'_hydras_metadata': cls._hydras_metadata})
         return super(StructMeta, cls).__new__(cls, name, bases, attributes)
 
     def __len__(cls):
-        return getattr(cls, '_metadata')['length']
+        return getattr(cls, '_hydras_metadata')['length']
 
     def __prepare__(cls, bases, **kwargs):
         return collections.OrderedDict()
 
     def __getitem__(self, item_count):
-        """
-        This hack enables the familiar array syntax: `type()[count]`.
-        For example, a 3-item array of type uint16_t might look like `uint16_t(default_value=5)[3]`.
-        """
-        # Importing locally in order to avoid weird import-cycle issues
-        from .vectors import Array
-        return Array(item_count, self)
+        return _create_array(item_count, self)
 
 
 class Struct(metaclass=StructMeta):
     """ A base class for the framework's structs. """
-
-    settings = {}
+    _hydras_metadata = None
 
     def __init__(self, **kwargs):
         """
@@ -227,7 +232,7 @@ class Struct(metaclass=StructMeta):
         super(Struct, self).__init__()
 
         # Initialize a copy of the data properties.
-        for var_name, var_formatter in self._metadata['members']:
+        for var_name, var_formatter in self._hydras_metadata['members']:
             # Accept a non-default value through the keyword arguments.
             if var_name in kwargs:
                 setattr(self, var_name, kwargs[var_name])
@@ -238,53 +243,7 @@ class Struct(metaclass=StructMeta):
     def get_name(cls):
         return cls.__name__
 
-    @classmethod
-    def extract_range(cls, fields, first=None, last=None, inclusive=True):
-        """
-        Extract a range from a list of fields.
-
-        :param fields:      A list of tuples (name, formatter)
-        :param first:       [Optional] The start of the range.
-        :param last:        [Optional] The end of the range.
-        :param inclusive:   [Optional] Determines whether the range includes the last field.
-        :return:            A slice of the input.
-        """
-        if first is None:
-            start_index = 0
-        else:
-            if not isinstance(first, (str,)):
-                raise ValueError('first must be a field name')
-
-            try:
-                start_index = indexof(lambda v: v[0] == first, fields)
-            except ValueError:
-                raise ValueError("Could not find `{}' in `{}'".format(first, cls.get_name()))
-
-        if last is None:
-            end_index = len(fields) - 1
-        else:
-            if not isinstance(last, (str,)):
-                raise ValueError('last must be a field name')
-
-            try:
-                end_index = indexof(lambda v: v[0] == last, fields)
-            except ValueError:
-                raise ValueError("Could not find `{}' in `{}'".format(last, cls.get_name()))
-
-        if start_index > end_index:
-            raise ValueError('The starting index is greater than the ending index.')
-
-        if inclusive:
-            end_index += 1
-
-        return fields[start_index:end_index]
-
-    @classmethod
-    def offsetof(cls, member: str) -> int:
-        """ Calculate the offset of the given member in the struct. """
-        return sum(len(v) for _, v in cls.extract_range(cls._metadata['members'], last=member, inclusive=False))
-
-    def serialize(self, settings: Dict[str, Any] = None, start=None, end=None):
+    def serialize(self, settings: Dict[str, Any] = None):
         """
         Serialize this struct into a byte string.
 
@@ -293,20 +252,13 @@ class Struct(metaclass=StructMeta):
         :param end:         [Optional] A reference to the last desired field to serialize.
         :return: A byte-string representing the struct.
         """
-        settings = HydraSettings.resolve(self.settings, settings)
+        settings = HydraSettings.resolve(settings)
 
         if not settings['dry_run']:
             self.before_serialize()
 
-        if settings['validate_on_serialize'] and not self.validate():
-            raise ValueError("The serialized data is invalid.")
-
-        if start is not None or end is not None:
-            fields = type(self).extract_range(self._metadata['members'], start, end)
-        else:
-            fields = self._metadata['members']
-
-        output = b''.join(formatter.format(vars(self)[name], settings) for name, formatter in fields)
+        output = b''.join(formatter.format(getattr(self, name), settings)
+                          for name, formatter in self._hydras_metadata['members'])
 
         if not settings['dry_run']:
             self.after_serialize()
@@ -316,7 +268,7 @@ class Struct(metaclass=StructMeta):
     @classmethod
     def deserialize(cls, raw_data, settings=None):
         """ Deserialize the given raw data into an object. """
-        settings = HydraSettings.resolve(settings, cls.settings)
+        settings = HydraSettings.resolve(settings)
 
         raw_data = string2bytes(raw_data)
 
@@ -326,7 +278,7 @@ class Struct(metaclass=StructMeta):
         if len(raw_data) < len(class_object):
             raise ValueError('The supplied raw data is too short for a struct of type "%s"' % cls.get_name())
 
-        for name, formatter in cls._metadata['members']:
+        for name, formatter in cls._hydras_metadata['members']:
             if formatter.is_constant_size():
                 data_piece = raw_data[:len(formatter)]
                 raw_data = raw_data[len(formatter):]
@@ -354,7 +306,7 @@ class Struct(metaclass=StructMeta):
 
     def validate(self):
         """ Determine the validity of the object's data. """
-        for formatter_name, formatter in self._metadata['members']:
+        for formatter_name, formatter in self._hydras_metadata['members']:
             value = vars(self)[formatter_name]
             if not formatter.validate(value):
                 raise ValueError('Field \'{}\' got an invalid value: {}.'.format(formatter_name, value))
@@ -366,13 +318,12 @@ class Struct(metaclass=StructMeta):
 
     def __len__(self):
         """ Get the length of the struct. """
-        length = self._metadata['length']
+        length = self._hydras_metadata['length']
 
-        if len(self._metadata['members']) > 0:
-            name, last_member = self._metadata['members'][-1]
-            if not last_member.is_constant_size():
-                length -= len(last_member)
-                length += last_member.get_actual_length(vars(self)[name])
+        name, last_member = self._hydras_metadata['members'][-1]
+        if not last_member.is_constant_size():
+            length -= len(last_member)
+            length += last_member.get_actual_length(vars(self)[name])
 
         return length
 
@@ -381,7 +332,7 @@ class Struct(metaclass=StructMeta):
         if type(other) != type(self):
             raise TypeError('Cannot equate struct of differing types.')
 
-        for name, formatter in self._metadata['members']:
+        for name, formatter in self._hydras_metadata['members']:
             if not formatter.values_equal(vars(self)[name], vars(other)[name]):
                 return False
 
@@ -395,7 +346,8 @@ class Struct(metaclass=StructMeta):
         """ A validation of struct members using the dot-notation. """
         if key == '_metadata' or key in vars(type(self)):
             formatter = vars(type(self))[key]
-            formatter.validate_assignment(value)
+            if not formatter.validate_assignment(value):
+                raise ValueError(f'Invalid value assigned to field "{key}"')
             self.__dict__[key] = value
         else:
             raise KeyError('Assigned type is not part of the struct %s: %s' % (str(key), str(value)))
@@ -407,7 +359,7 @@ class Struct(metaclass=StructMeta):
             return '\n'.join(lines)
 
         output = ''
-        for name, formatter in self._metadata['members']:
+        for name, formatter in self._hydras_metadata['members']:
             field_string = formatter.render(vars(self)[name], name)
             output += '%s\n' % indent_text(field_string)
 
@@ -415,7 +367,7 @@ class Struct(metaclass=StructMeta):
         return '%s {\n%s\n}' % (type(self).get_name(), indent_text(output))
 
     def __iter__(self):
-        for key, _ in self._metadata['members']:
+        for key, _ in self._hydras_metadata['members']:
             value = getattr(self, key)
             if issubclass(type(value), Struct):
                 yield key, dict(value)
@@ -434,9 +386,7 @@ class Struct(metaclass=StructMeta):
         This hack enables the familiar array syntax: `type()[count]`.
         For example, a 3-item array of type uint16_t might look like `uint16_t(default_value=5)[3]`.
         """
-        # Importing locally in order to avoid weird import-cycle issues
-        from .vectors import Array
-        return Array(item_count, self)
+        return _create_array(item_count, self)
 
 
 class NestedStruct(Serializer):
@@ -465,6 +415,12 @@ class NestedStruct(Serializer):
 
     def parse(self, raw_data, settings=None):
         return self.nested_object_type.deserialize(raw_data, settings)
+
+    def validate_assignment(self, value):
+        return True
+
+    def validate(self, value) -> bool:
+        return value.validate()
 
     def __len__(self):
         return len(self.default_value)

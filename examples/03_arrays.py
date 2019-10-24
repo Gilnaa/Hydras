@@ -19,7 +19,7 @@ class SmallStruct(Struct):
 
 
 class HasArraysInIt(Struct):
-    byte_array = Array(8)
+    byte_array = u8[8]
     dword_array = u32[2]
     object_array = SmallStruct[4]
 

@@ -16,8 +16,8 @@ class SmallStruct(Struct):
 
 
 class ThisIsAStruct(Struct):
-    byte_array = Array(8)                  # A byte array with 8 items.
-    int_array = i32[5]            # An integer array with 5 items.
+    byte_array = u8[8]              # A byte array with 8 items.
+    int_array = i32[5]              # An integer array with 5 items.
     struct_array = SmallStruct[3]   # An array of 3 struct, each sized 4 bytes.
 
 
