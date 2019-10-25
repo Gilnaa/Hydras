@@ -7,7 +7,7 @@ Contains various utility methods.
     - Gilad Naaman <gilad@naaman.io>
 """
 
-import struct
+from typing import Type
 import inspect
 import enum
 import sys
@@ -52,11 +52,8 @@ def get_as_value(v):
     return v() if inspect.isclass(v) else v
 
 
-def indexof(callable, it):
-    for i, v in enumerate(it):
-        if callable(v):
-            return i
-    raise ValueError
+def is_strict_subclass(typ: Type, classinfo: Type) -> bool:
+    return typ is not classinfo and issubclass(typ, classinfo)
 
 
 def to_chunks(byte_string, chunk_size):

@@ -70,6 +70,20 @@ class StructTests(HydrasTestCase):
             }
         self.assertEqual(d, expected_dict)
 
+    def test_derived_struct(self):
+        class DerivedStruct(SimpleStruct):
+            derived = u8
+
+        class DerivedStructEmpty(SimpleStruct):
+            pass
+
+        simple = SimpleStruct()
+        derived = DerivedStruct()
+        empty = DerivedStructEmpty()
+
+        self.assertEqual(simple.serialize() + b'\x00', derived.serialize())
+        self.assertEqual(simple.serialize(), empty.serialize())
+
 
 if __name__ == '__main__':
     unittest.main()

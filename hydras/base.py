@@ -173,11 +173,17 @@ class Serializer(metaclass=SerializerMeta):
         return _create_array(item_count, self)
 
 
+class StructMetadata(object):
+    name = None
+    size = 0
+    members = ()
+
+
 class StructMeta(type):
-    _hydras_metadata = None
+    HYDRAS_METAATTR = '__hydras_metadata'
 
     def __new__(cls, name, bases, attributes):
-        if cls._hydras_metadata is None or cls._hydras_metadata['name'] != name:
+        if not hasattr(cls, cls.HYDRAS_METAATTR):
             members = []
             for member_name, fmt in attributes.items():
                 if issubclass(type(fmt), Serializer):
@@ -191,26 +197,43 @@ class StructMeta(type):
                     members.append((member_name, NestedStruct(fmt)))
                     attributes[member_name] = NestedStruct(fmt)
 
-            metadata = {
-                'name': name,
-                'length': 0,
-                'members': tuple(members)
-            }
+            inherited_members = []
+            inherits_vla = False
+
+            for base in bases:
+                if not issubclass(type(base), StructMeta):
+                    raise TypeError('Hydras structs can only derive other structs')
+
+                if not base._hydras_is_constant_size():
+                    if len(members) > 0:
+                        raise TypeError('Cannot declare fields when deriving a variable-length struct.')
+                    if inherits_vla:
+                        raise TypeError('Cannot derive more than one variable-length Struct')
+                    inherits_vla = True
+                elif inherits_vla:
+                    raise TypeError('When deriving a variable-length struct, it must be last in the inheritance list')
+
+                inherited_members.extend(base._hydras_members())
+
+            members = tuple(inherited_members + members)
 
             # Ensure that only the last member can be a VLA
-            for member_name, field in metadata['members'][:-1]:
+            for member_name, field in members[:-1]:
                 if not field.is_constant_size():
                     raise TypeError("Only the last member of a struct can be variable length.")
 
             # Initialize a copy of the data properties.
-            metadata['length'] = sum(len(get_as_value(v)) for _, v in metadata['members'])
+            metadata = StructMetadata()
+            metadata.name = name
+            metadata.size = sum(len(v) for _, v in members)
+            metadata.members = members
 
-            setattr(cls, '_hydras_metadata', metadata)
-        attributes.update({'_hydras_metadata': cls._hydras_metadata})
+            attributes.update({cls.HYDRAS_METAATTR: metadata})
+
         return super(StructMeta, cls).__new__(cls, name, bases, attributes)
 
     def __len__(cls):
-        return getattr(cls, '_hydras_metadata')['length']
+        return getattr(cls, cls.HYDRAS_METAATTR).size
 
     def __prepare__(cls, bases, **kwargs):
         return collections.OrderedDict()
@@ -221,7 +244,6 @@ class StructMeta(type):
 
 class Struct(metaclass=StructMeta):
     """ A base class for the framework's structs. """
-    _hydras_metadata = None
 
     def __init__(self, **kwargs):
         """
@@ -232,7 +254,7 @@ class Struct(metaclass=StructMeta):
         super(Struct, self).__init__()
 
         # Initialize a copy of the data properties.
-        for var_name, var_formatter in self._hydras_metadata['members']:
+        for var_name, var_formatter in self._hydras_members():
             # Accept a non-default value through the keyword arguments.
             if var_name in kwargs:
                 setattr(self, var_name, kwargs[var_name])
@@ -242,6 +264,21 @@ class Struct(metaclass=StructMeta):
     @classmethod
     def get_name(cls):
         return cls.__name__
+
+    @classmethod
+    def _hydras_metadata(cls) -> StructMetadata:
+        return getattr(cls, StructMeta.HYDRAS_METAATTR, None)
+
+    @classmethod
+    def _hydras_members(cls):
+        return cls._hydras_metadata().members
+
+    @classmethod
+    def _hydras_is_constant_size(cls):
+        if len(cls._hydras_members()) == 0:
+            return True
+        _, serializer = cls._hydras_members()[-1]
+        return serializer.is_constant_size()
 
     def serialize(self, settings: Dict[str, Any] = None):
         """
@@ -258,7 +295,7 @@ class Struct(metaclass=StructMeta):
             self.before_serialize()
 
         output = b''.join(formatter.format(getattr(self, name), settings)
-                          for name, formatter in self._hydras_metadata['members'])
+                          for name, formatter in self._hydras_members())
 
         if not settings['dry_run']:
             self.after_serialize()
@@ -278,7 +315,7 @@ class Struct(metaclass=StructMeta):
         if len(raw_data) < len(class_object):
             raise ValueError('The supplied raw data is too short for a struct of type "%s"' % cls.get_name())
 
-        for name, formatter in cls._hydras_metadata['members']:
+        for name, formatter in cls._hydras_members():
             if formatter.is_constant_size():
                 data_piece = raw_data[:len(formatter)]
                 raw_data = raw_data[len(formatter):]
@@ -306,7 +343,7 @@ class Struct(metaclass=StructMeta):
 
     def validate(self):
         """ Determine the validity of the object's data. """
-        for formatter_name, formatter in self._hydras_metadata['members']:
+        for formatter_name, formatter in self._hydras_members():
             value = vars(self)[formatter_name]
             if not formatter.validate(value):
                 raise ValueError('Field \'{}\' got an invalid value: {}.'.format(formatter_name, value))
@@ -318,10 +355,10 @@ class Struct(metaclass=StructMeta):
 
     def __len__(self):
         """ Get the length of the struct. """
-        length = self._hydras_metadata['length']
+        length = self._hydras_metadata().size
 
-        name, last_member = self._hydras_metadata['members'][-1]
-        if not last_member.is_constant_size():
+        if not self._hydras_is_constant_size():
+            name, last_member = self._hydras_members()[-1]
             length -= len(last_member)
             length += last_member.get_actual_length(vars(self)[name])
 
@@ -332,7 +369,7 @@ class Struct(metaclass=StructMeta):
         if type(other) != type(self):
             raise TypeError('Cannot equate struct of differing types.')
 
-        for name, formatter in self._hydras_metadata['members']:
+        for name, formatter in self._hydras_members():
             if not formatter.values_equal(vars(self)[name], vars(other)[name]):
                 return False
 
@@ -344,8 +381,8 @@ class Struct(metaclass=StructMeta):
 
     def __setattr__(self, key, value):
         """ A validation of struct members using the dot-notation. """
-        if key == '_metadata' or key in vars(type(self)):
-            formatter = vars(type(self))[key]
+        if hasattr(self, key):
+            formatter = getattr(type(self), key)
             if not formatter.validate_assignment(value):
                 raise ValueError(f'Invalid value assigned to field "{key}"')
             self.__dict__[key] = value
@@ -359,7 +396,7 @@ class Struct(metaclass=StructMeta):
             return '\n'.join(lines)
 
         output = ''
-        for name, formatter in self._hydras_metadata['members']:
+        for name, formatter in self._hydras_members():
             field_string = formatter.render(vars(self)[name], name)
             output += '%s\n' % indent_text(field_string)
 
@@ -367,7 +404,8 @@ class Struct(metaclass=StructMeta):
         return '%s {\n%s\n}' % (type(self).get_name(), indent_text(output))
 
     def __iter__(self):
-        for key, _ in self._hydras_metadata['members']:
+        """ Support conversion to dict """
+        for key, _ in self._hydras_members():
             value = getattr(self, key)
             if issubclass(type(value), Struct):
                 yield key, dict(value)

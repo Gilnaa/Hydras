@@ -11,6 +11,7 @@ import collections
 
 from .base import *
 from .utils import *
+import struct
 
 
 sequential_id = 0
