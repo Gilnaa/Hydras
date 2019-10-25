@@ -59,6 +59,28 @@ class TestVLA(HydrasTestCase):
                 b = u8[1:15]
                 a = u8
 
+    def test_vla_derivation(self):
+        class ConstantSizeStruct(Struct):
+            d = u8
+
+        class VLA(Struct):
+            c = u8
+            a = u8[1:2]
+
+        # This derivation is valid since we're not adding any members
+        class ValidDerivation(VLA):
+            pass
+
+        class ValidMutiDerivation(ConstantSizeStruct, VLA):
+            pass
+
+        with self.assertRaises(TypeError):
+            class InvalidDerivation(VLA):
+                b = u8
+        with self.assertRaises(TypeError):
+            class InvalidMutiDerivation(VLA, ConstantSizeStruct):
+                pass
+
     def test_vla_value_assignment_checks(self):
         class Florper(Struct):
             a = u8[4:16]
