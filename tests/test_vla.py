@@ -59,6 +59,34 @@ class TestVLA(HydrasTestCase):
                 b = u8[1:15]
                 a = u8
 
+    def test_unaligned_raw_data(self):
+        # Positive case
+        class Florp(Struct):
+            b = u16[0:15]
+
+        with self.assertRaises(ValueError):
+            Florp.deserialize(b'\x00\x00\x00')
+
+    def test_open_ended_slice(self):
+        class UpperBound(Struct):
+            b = u8[:3]
+
+        self.assertEqual(len(UpperBound.deserialize(b'').b), 0)
+        self.assertEqual(len(UpperBound.deserialize(b'\x00\x00\x00').b), 3)
+
+        class LowerBound(Struct):
+            b = u8[3:]
+
+        self.assertEqual(len(LowerBound.deserialize(b'\x00\x00\x00').b), 3)
+        self.assertEqual(len(LowerBound.deserialize(b'\x00' * 100).b), 100)
+
+        class Unbound(Struct):
+            b = u8[:]
+
+        self.assertEqual(len(Unbound.deserialize(b'\x00\x00\x00').b), 3)
+        self.assertEqual(len(Unbound.deserialize(b'\x00' * 100).b), 100)
+        self.assertEqual(len(Unbound.deserialize(b'').b), 0)
+
     def test_vla_derivation(self):
         class ConstantSizeStruct(Struct):
             d = u8

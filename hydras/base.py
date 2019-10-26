@@ -360,7 +360,7 @@ class Struct(metaclass=StructMeta):
         length = self._hydras_metadata().size
 
         if not self._hydras_is_constant_size():
-            name, last_member = next(reversed(self._hydras_members()))
+            name, last_member = next(reversed(self._hydras_members().items()))
             length -= len(last_member)
             length += last_member.get_actual_length(getattr(self, name))
 
@@ -398,7 +398,7 @@ class Struct(metaclass=StructMeta):
             return '\n'.join(lines)
 
         output = ''
-        for name, formatter in self._hydras_members():
+        for name, formatter in self._hydras_members().items():
             field_string = formatter.render(getattr(self, name), name)
             output += '%s\n' % indent_text(field_string)
 

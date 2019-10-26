@@ -86,11 +86,11 @@ class Array(Serializer):
         # type is a Struct type/class.
         if issubclass(t, Struct):
             self.formatter = NestedStruct(items_type)
-            return [t() if inspect.isclass(items_type) else copy.deepcopy(items_type) for _ in range(length)]
+            return tuple(t() if inspect.isclass(items_type) else copy.deepcopy(items_type) for _ in range(length))
         # type is a Scalar class.
         elif issubclass(t, Serializer):
             self.formatter = get_as_value(items_type)
-            return [copy.deepcopy(self.formatter.default_value) for _ in range(length)]
+            return tuple(copy.deepcopy(self.formatter.default_value) for _ in range(length))
         else:
             raise TypeError('Array: items_type should be a Serializer or a Struct')
 
@@ -107,18 +107,8 @@ class Array(Serializer):
             raise ValueError('Raw data is not in the correct length.')
 
         settings = HydraSettings.resolve(self.settings, settings)
-        raw_data = string2bytes(raw_data)
 
-        if self.default_value is not None:
-            t = get_as_type(self.default_value)
-            if t in (str, bytes):
-                f = lambda g: b''.join(string2bytes(chr(c)) for c in g)
-            else:
-                f = t
-        else:
-            f = tuple
-
-        return f(
+        return tuple(
             self.formatter.parse(raw_data[begin:begin+len(self.formatter)], settings)
             for begin in range(0, len(self), len(self.formatter))
         )
@@ -135,11 +125,15 @@ class Array(Serializer):
         return a == b
 
     def validate_assignment(self, value):
-        if not any([isinstance(value, t) for t in [str, tuple, list, bytes]]):
+        allowed_types = (tuple, list)
+        if self.formatter is u8 or type(self.formatter) is u8:
+            allowed_types += (bytes, )
+
+        if not isinstance(value, allowed_types):
             raise TypeError('Assigned value must be a string, tuple, or a list.')
 
-        if len(value) > self.length:
-            raise ValueError('Assigned array is too long.')
+        if len(value) != self.length:
+            raise ValueError('Assigned array length is incorrect.')
 
         return all(self.formatter.validate_assignment(i) for i in value)
 
@@ -152,7 +146,7 @@ class VariableArray(Serializer):
     The default value's type is a byte (uint8_t), but can subtituted for any Struct or Scalar.
     """
 
-    def __init__(self, min_length, max_length, items_type=u8, default_value=None, *args, **kwargs):
+    def __init__(self, min_length=None, max_length=None, items_type=u8, default_value=None, *args, **kwargs):
         """
         Initialize this Array object.
 
@@ -168,12 +162,13 @@ class VariableArray(Serializer):
         :param args:            A paramater list to be passed to the base class.
         :param kwargs:          A paramater dict to be passed to the base class.
         """
-        # Note: line below might throw exception.
+        # Note: line below might throw an exception.
+        min_length = min_length or 0
         alternate_default_value = self.init_type_resolver(items_type, min_length)
 
         self.min_length = min_length
         self.max_length = max_length
-        self.byte_size = min_length * len(self.formatter)
+        self.byte_size = self.min_length * len(self.formatter)
 
         if default_value is None:
             default_value = alternate_default_value
@@ -202,15 +197,18 @@ class VariableArray(Serializer):
         """ Return a serialized representation of this object. """
         settings = HydraSettings.resolve(self.settings, settings)
 
-        return padto(b''.join(
-            self.formatter.format(s, settings) for s in value
-        ), len(self))
+        return b''.join(self.formatter.format(s, settings) for s in value)
 
     def parse(self, raw_data, settings=None):
-        if len(raw_data) > self.max_length * len(self.formatter):
+        fmt_size = len(self.formatter)
+
+        if self.max_length is not None and \
+                len(raw_data) > self.max_length * fmt_size:
             raise ValueError('Raw data is too long for variable length array.')
-        elif len(raw_data) < self.min_length * len(self.formatter):
+        elif len(raw_data) < self.min_length * fmt_size:
             raise ValueError('Raw data is too short for variable length array.')
+        elif len(raw_data) % fmt_size != 0:
+            raise ValueError('Raw data is not aligned to item size.')
 
         settings = HydraSettings.resolve(self.settings, settings)
         raw_data = string2bytes(raw_data)
@@ -224,10 +222,9 @@ class VariableArray(Serializer):
         else:
             f = tuple
 
-        fmt_size = len(self.formatter)
         return f(
-            self.formatter.parse(raw_data[begin:begin+len(self.formatter)], settings)
-            for begin in range(0, min(self.max_length * fmt_size, len(raw_data)), fmt_size)
+            self.formatter.parse(raw_data[begin:begin+fmt_size], settings)
+            for begin in range(0, len(raw_data), fmt_size)
         )
 
     def __len__(self):
@@ -251,7 +248,7 @@ class VariableArray(Serializer):
             
         if len(value) < self.min_length:
             raise ValueError("Data is too short for serialization of VLA.")
-        elif len(value) > self.max_length:
+        elif self.max_length is not None and len(value) > self.max_length:
             raise ValueError("Data is too long for serialization of VLA.")
 
         # Make sure each element in the collection is also valid according to `self.formatter`.
