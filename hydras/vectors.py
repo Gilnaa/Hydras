@@ -211,18 +211,8 @@ class VariableArray(Serializer):
             raise ValueError('Raw data is not aligned to item size.')
 
         settings = HydraSettings.resolve(self.settings, settings)
-        raw_data = string2bytes(raw_data)
 
-        if self.default_value is not None:
-            t = get_as_type(self.default_value)
-            if t in (str, bytes):
-                f = lambda g: b''.join(string2bytes(chr(c)) for c in g)
-            else:
-                f = t
-        else:
-            f = tuple
-
-        return f(
+        return tuple(
             self.formatter.parse(raw_data[begin:begin+fmt_size], settings)
             for begin in range(0, len(raw_data), fmt_size)
         )

@@ -52,25 +52,6 @@ def get_as_value(v):
     return v() if inspect.isclass(v) else v
 
 
-def is_strict_subclass(typ: Type, classinfo: Type) -> bool:
-    return typ is not classinfo and issubclass(typ, classinfo)
-
-
-def to_chunks(byte_string, chunk_size):
-    """
-    Divide the given byte_string into chunks in the given size.
-
-    :param byte_string: The string to divide.
-    :param chunk_size:  The size of each of the chunks.
-    :return:            A list of byte-strings.
-    """
-    chunks = []
-    for idx in range(0, len(byte_string), chunk_size):
-        chunks.append(byte_string[idx:idx + chunk_size])
-
-    return chunks
-
-
 def mask(length, offset=0):
     """
     Generate a bitmask with the given parameter.
@@ -80,16 +61,6 @@ def mask(length, offset=0):
     :return:        An integer representing the bit mask.
     """
     return ((1 << length) - 1) << offset
-
-
-def string2bytes(s):
-    """ Make regular ol' strings work as bytes in python3. """
-    if isinstance(s, tuple):
-        s = ''.join([chr(i) for i in s])
-
-    if not isinstance(s, bytes):
-        return s.encode('ascii')
-    return s
 
 
 def padto(data, size, pad_val=b'\x00', leftpad=False):

@@ -309,8 +309,6 @@ class Struct(metaclass=StructMeta):
         """ Deserialize the given raw data into an object. """
         settings = HydraSettings.resolve(settings)
 
-        raw_data = string2bytes(raw_data)
-
         # Create a new struct object and set its properties.
         class_object = cls()
 

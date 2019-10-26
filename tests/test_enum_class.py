@@ -76,11 +76,11 @@ class EnumClassTests(HydrasTestCase):
 
     def test_parse_options(self):
         f = EOpcodeThingie(type_formatter=u8)
-        self.assertEqual(0, f.parse('\x00'))
-        self.assertEqual(10, f.parse('\x0A'))
+        self.assertEqual(0, f.parse(b'\x00'))
+        self.assertEqual(10, f.parse(b'\x0A'))
 
         with self.assertRaises(ValueError):
-            f.parse('\xFF')
+            f.parse(b'\xFF')
 
     def test_self_compatibility(self):
         s = StructStuff()

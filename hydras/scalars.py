@@ -45,7 +45,7 @@ class Scalar(Serializer):
         return struct.pack(endian.value + self._fmt, value)
 
     def parse(self, raw_data, settings=None):
-        return struct.unpack(self._fmt, string2bytes(raw_data))[0]
+        return struct.unpack(self._fmt, raw_data)[0]
 
     @classmethod
     def __len__(cls):
