@@ -86,11 +86,11 @@ class Array(Serializer):
         # type is a Struct type/class.
         if issubclass(t, Struct):
             self.formatter = NestedStruct(items_type)
-            return tuple(t() if inspect.isclass(items_type) else copy.deepcopy(items_type) for _ in range(length))
+            return [t() if inspect.isclass(items_type) else copy.deepcopy(items_type) for _ in range(length)]
         # type is a Scalar class.
         elif issubclass(t, Serializer):
             self.formatter = get_as_value(items_type)
-            return tuple(copy.deepcopy(self.formatter.default_value) for _ in range(length))
+            return [copy.deepcopy(self.formatter.default_value) for _ in range(length)]
         else:
             raise TypeError('Array: items_type should be a Serializer or a Struct')
 
@@ -108,10 +108,8 @@ class Array(Serializer):
 
         settings = HydraSettings.resolve(self.settings, settings)
 
-        return tuple(
-            self.formatter.parse(raw_data[begin:begin+len(self.formatter)], settings)
-            for begin in range(0, len(self), len(self.formatter))
-        )
+        return [self.formatter.parse(raw_data[begin:begin+len(self.formatter)], settings)
+                for begin in range(0, len(self), len(self.formatter))]
 
     def __len__(self):
         """ Return the size of this Array in bytes."""
@@ -162,8 +160,8 @@ class VariableArray(Serializer):
         :param args:            A paramater list to be passed to the base class.
         :param kwargs:          A paramater dict to be passed to the base class.
         """
-        # Note: line below might throw an exception.
         min_length = min_length or 0
+        # Note: line below might throw an exception.
         alternate_default_value = self.init_type_resolver(items_type, min_length)
 
         self.min_length = min_length
@@ -212,10 +210,8 @@ class VariableArray(Serializer):
 
         settings = HydraSettings.resolve(self.settings, settings)
 
-        return tuple(
-            self.formatter.parse(raw_data[begin:begin+fmt_size], settings)
-            for begin in range(0, len(raw_data), fmt_size)
-        )
+        return [self.formatter.parse(raw_data[begin:begin+fmt_size], settings)
+                for begin in range(0, len(raw_data), fmt_size)]
 
     def __len__(self):
         """ Return the *minimal* size of this Array in bytes."""
