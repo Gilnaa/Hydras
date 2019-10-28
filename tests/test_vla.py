@@ -15,10 +15,10 @@ class TestVLA(HydrasTestCase):
 
     def test_default_value(self):
         # Default value should be the minimal length
-        self.assertEqual(u8[5:7].default_value, (0, ) * 5)
+        self.assertEqual(u8[5:7]().default_value, [0] * 5)
 
     def test_vla_sizes(self):
-        a = u16[1:4]
+        a = u16[1:4]()
 
         # Assert the len(Formatter) issues the minimal length
         self.assertEqual(len(a), len(u16))
@@ -39,9 +39,8 @@ class TestVLA(HydrasTestCase):
         for i in range(1, 5):
             nimrod_fucking_kaplan.florp = [0] * i
 
-        # sub- minimal length
-        with self.assertRaises(ValueError):
-            nimrod_fucking_kaplan.florp = []
+        # Accept a sub-minimum length array. The serialized result should be padded.
+        nimrod_fucking_kaplan.florp = []
 
         # above- maximal length
         with self.assertRaises(ValueError):
@@ -53,11 +52,18 @@ class TestVLA(HydrasTestCase):
             a = u8
             b = u8[1:15]
 
+        self.assertFalse(Florp.is_constant_size())
+
         # Negative case
         with self.assertRaises(TypeError):
             class Blarg(Struct):
                 b = u8[1:15]
                 a = u8
+
+        with self.assertRaises(TypeError):
+            class Zlorp(Struct):
+                a = Florp
+                b = u8
 
     def test_unaligned_raw_data(self):
         # Positive case
@@ -115,8 +121,7 @@ class TestVLA(HydrasTestCase):
 
         a = Florper()
 
-        with self.assertRaises(ValueError):
-            a.a = [0] * 2
+        a.a = [0] * 2
 
         with self.assertRaises(ValueError):
             a.a = [0] * 18

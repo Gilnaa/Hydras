@@ -11,7 +11,7 @@ Contains the union type formatter.
 import struct
 import inspect
 from .base import Serializer
-from .vectors import NestedStruct
+from .struct import NestedStruct
 from .utils import padto, get_as_type, get_as_value
 
 

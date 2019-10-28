@@ -9,11 +9,12 @@ A catch-all file that imports the whole framework.
 
 # Core classes.
 from .base import *
+from .struct import *
 
 # Serializers
 from .scalars import *
 # Only import Pad because the rest have a dedicated syntax
-from .vectors import Pad
+from .array import Pad
 from .enum_class import *
 from .bitfield import *
 from .union import *

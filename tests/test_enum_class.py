@@ -87,7 +87,7 @@ class EnumClassTests(HydrasTestCase):
         self.assertEqual(s, StructStuff.deserialize(s.serialize()))
 
     def test_enum_array(self):
-        enarr = EOpcodeThingie[2]
+        enarr = EOpcodeThingie[2]()
         self.assertEqual(enarr.format((EOpcodeThingie.a, EOpcodeThingie.b)), b'\x00\x00\x00\x00\x01\x00\x00\x00')
 
 

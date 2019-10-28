@@ -7,7 +7,7 @@ Contains various utility methods.
     - Gilad Naaman <gilad@naaman.io>
 """
 
-from typing import Type
+from typing import Any, Type, Union as TypeUnion
 import inspect
 import enum
 import sys
@@ -61,6 +61,10 @@ def mask(length, offset=0):
     :return:        An integer representing the bit mask.
     """
     return ((1 << length) - 1) << offset
+
+
+def get_type_name(t: TypeUnion[Type, Any]) -> str:
+    return get_as_type(t).__name__
 
 
 def padto(data, size, pad_val=b'\x00', leftpad=False):
