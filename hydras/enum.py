@@ -21,13 +21,26 @@ class auto:
     pass
 
 
+class Literal:
+    def __init__(self, enum, literal_name, value):
+        self.enum = enum
+        self.literal_name = literal_name
+        self.value = value
+
+    def __int__(self):
+        return self.value
+
+    def __repr__(self):
+        return f'{get_type_name(self.enum)}.{self.literal_name}'
+
+
 class EnumMetadata(SerializerMetadata):
     _VALID_UNDERLYING_TYPES = (
         u8, u16, u32, u64, i8, i16, i32, i64,
         u8_le, u16_le, u32_le, u64_le, i8_le, i16_le, i32_le, i64_le,
         u8_be, u16_be, u32_be, u64_be, i8_be, i16_be, i32_be, i64_be)
 
-    def __init__(self, *, literals: collections.OrderedDict, underlying: Scalar = i32, flags: bool = False):
+    def __init__(self, *, literals: collections.OrderedDict, underlying: Type['Scalar'] = i32, flags: bool = False):
         super().__init__(underlying.byte_size)
 
         if underlying not in self._VALID_UNDERLYING_TYPES:
@@ -45,7 +58,7 @@ class EnumMetadata(SerializerMetadata):
 
 
 class EnumMeta(SerializerMeta):
-    def __new__(mcs, name, bases, classdict, underlying_type=u32):
+    def __new__(mcs, name, bases, classdict: collections.OrderedDict, underlying_type=u32):
         if not hasattr(mcs, SerializerMeta.METAATTR):
             literals = (
                 (k, v) for k, v in classdict.items()
@@ -64,6 +77,9 @@ class EnumMeta(SerializerMeta):
                 next_expected_value = literal + 1
                 literals_dict[lit_name] = literal
 
+            for lit_name in literals_dict:
+                del classdict[lit_name]
+
             classdict.update({
                 SerializerMeta.METAATTR: EnumMetadata(literals=literals_dict, underlying=underlying_type)
             })
@@ -76,6 +92,12 @@ class EnumMeta(SerializerMeta):
     @property
     def literals(cls) -> collections.OrderedDict:
         return cls.__hydras_metadata__.literals
+
+    def __getattr__(self, name):
+        # Wrap literals in a `Literal` object
+        if name in self.literals:
+            return Literal(self, name, self.literals[name])
+        return super().__getattr__(name)
 
 
 class Enum(Serializer, metaclass=EnumMeta):
@@ -92,31 +114,35 @@ class Enum(Serializer, metaclass=EnumMeta):
 
         # Validate the default_value
         if default_value is None:
-            default_value = next(iter(self.literals.values()))
+            lit_name, default_value = next(iter(self.literals.items()))
         elif isinstance(default_value, int):
             if not self.is_constant_valid(default_value):
                 raise ValueError('Literal constant is not included in the enum: %d' % default_value)
+            lit_name = self.get_const_name(default_value)
 
+        default_value = Literal(type(self), lit_name, default_value)
         super(Enum, self).__init__(default_value, *args, **kwargs)
 
-    def format(self, value, settings=None):
-        return self.serializer.format(value, self.resolve_settings(settings))
+    def format(self, value: Literal, settings=None):
+        assert (isinstance(value, Literal) and value.enum == type(self)) or \
+               (isinstance(value, int) and self.is_constant_valid(value))
+
+        return self.serializer.format(int(value), self.resolve_settings(settings))
 
     def parse(self, raw_data, settings=None):
         value = self.serializer.parse(raw_data, self.resolve_settings(settings))
 
-        if settings['strong_enum_literals'] and not self.is_constant_valid(value):
+        if not self.is_constant_valid(value):
             raise ValueError('Parsed enum value is unknown: %d' % value)
 
-        return value
+        return Literal(type(self), self.get_const_name(value) or '<invalid>', value)
 
     def validate(self, value):
         """ Validate the given enum value. """
-        if HydraSettings.strong_enum_literals and \
-                not self.is_constant_valid(value):
+        if not self.is_constant_valid(int(value)):
             return False
 
-        return super(Enum, self).validate(value)
+        return super(Enum, self).validate(int(value))
 
     def is_constant_valid(self, num):
         """ Determine if the given number is a valid enum literal. """
@@ -126,31 +152,8 @@ class Enum(Serializer, metaclass=EnumMeta):
         """ Get the name of the constant from a number or a Literal object. """
         return next((n for n, v in self.literals.items() if v == num), None)
 
-    def render(self, value, name):
-        """ Render the enum value. """
-        if HydraSettings.render_enums_as_integers:
-            value = str(value)
-        else:
-            value = self.render_string(value)
-
-        return '%s = %s' % (name, value)
-
-    def render_string(self, value):
-        """ Render the enum value as a string. """
-        template = '%s'
-        if HydraSettings.full_enum_names:
-            template = get_type_name(self) + '.%s'
-
-        if isinstance(value, int):
-            return template % self.get_const_name(value)
-
-        if isinstance(value, str):
-            return template % value
-
-        raise ValueError()
-
     def values_equal(self, a, b):
-        return a == b
+        return int(a) == int(b)
 
     def __iter__(self):
-        return self.literals.items().__iter__()
+        return iter(self.literals.items())

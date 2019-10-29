@@ -14,10 +14,10 @@ import binascii
 
 
 class Opcodes(Enum):
-    Invalid = Literal()
-    Data = Literal()
-    Ack = Literal()
-    Nack = Literal()
+    Invalid = auto()
+    Data = auto()
+    Ack = auto()
+    Nack = auto()
 
 
 class AnotherHeader(Struct):

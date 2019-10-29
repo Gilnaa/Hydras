@@ -220,18 +220,7 @@ class Struct(metaclass=StructMeta):
             raise KeyError('Assigned type is not part of the struct %s: %s' % (str(key), str(value)))
 
     def __repr__(self):
-        """ Create a string representation of the struct's data. """
-        def indent_text(text):
-            lines = ['    ' + line for line in text.split('\n')]
-            return '\n'.join(lines)
-
-        output = ''
-        for name, formatter in self._hydras_members().items():
-            field_string = formatter.render(getattr(self, name), name)
-            output += '%s\n' % indent_text(field_string)
-
-        output = output.strip('\n')
-        return '%s {\n%s\n}' % (type(self).get_name(), indent_text(output))
+        return repr(dict(self))
 
     def __iter__(self):
         """ Support conversion to dict """

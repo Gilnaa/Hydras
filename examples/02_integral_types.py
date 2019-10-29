@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-:file: 02_integral_formatters.py
+:file: 02_integral_types.py
 
 A showcase of the available "primitive" types.
 
@@ -27,19 +27,6 @@ class Showcase(Struct):
 
     single_float = f32()
     double_float = f64()
-
-
-class StdintAliases(Struct):
-    """ A bunch of aliases that looks like the typedefs from stdint.h"""
-    unsigned_byte = u8
-    unsigned_word = u16
-    unsigned_dword = u32
-    unsigned_qword = u64
-
-    signed_byte = i8
-    signed_word = i16
-    signed_dword = i32
-    signed_qword = i64
 
 
 class PrimitiveFeatures(Struct):

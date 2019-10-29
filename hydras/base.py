@@ -23,15 +23,6 @@ class HydraSettings(object):
     # Determines whether the validate hook will be checked.
     validate = True
 
-    # Determines whether parsed enum literals have to be part of the enum.
-    strong_enum_literals = True
-
-    # When True, renders enum values as integers instead of strings.
-    render_enums_as_integers = False
-
-    # When True and `render_enums_as_integers == False`, renders enum literals as "EnumName.LiteralName"
-    full_enum_names = True
-
     # The endianness of the "target" CPU. By the default is the same as the host.
     target_endian = Endianness.HOST
 
@@ -169,10 +160,6 @@ class Serializer(metaclass=SerializerMeta):
     def values_equal(self, a, b):
         """ Determines whether the given two values are equal. """
         return a == b
-
-    def render(self, value, name):
-        """ Returns a displayable string for the given value. """
-        return '%s: %s' % (name, value)
 
     def get_actual_length(self, value):
         """ When used on variable length formatters, returns the actual serialized length of the given python value. """
