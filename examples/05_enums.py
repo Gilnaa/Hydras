@@ -13,7 +13,7 @@ from hydras import *
 import binascii
 
 
-class Opcodes(EnumClass):
+class Opcodes(Enum):
     Invalid = Literal()
     Data = Literal()
     Ack = Literal()

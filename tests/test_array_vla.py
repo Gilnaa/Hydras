@@ -21,13 +21,13 @@ class TestVLA(HydrasTestCase):
         a = u16[1:4]()
 
         # Assert the len(Formatter) issues the minimal length
-        self.assertEqual(len(a), len(u16))
+        self.assertEqual(a.byte_size, u16.byte_size)
 
         # The "real" length should depend on the used value
-        self.assertEqual(a.get_actual_length([1]), len(u16) * 1)
-        self.assertEqual(a.get_actual_length([1, 2]), len(u16) * 2)
-        self.assertEqual(a.get_actual_length([1, 2, 3]), len(u16) * 3)
-        self.assertEqual(a.get_actual_length([1, 2, 3, 4]), len(u16) * 4)
+        self.assertEqual(a.get_actual_length([1]), u16.byte_size * 1)
+        self.assertEqual(a.get_actual_length([1, 2]), u16.byte_size * 2)
+        self.assertEqual(a.get_actual_length([1, 2, 3]), u16.byte_size * 3)
+        self.assertEqual(a.get_actual_length([1, 2, 3, 4]), u16.byte_size * 4)
 
     def test_vla_wrong_sizes_on_assignment(self):
         class FUBAR(Struct):

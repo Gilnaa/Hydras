@@ -14,6 +14,19 @@ from .utils import *
 import copy
 
 
+class ArrayMetadata(SerializerMetadata):
+    __slots__ = ('array_size_min', 'array_size_max', 'serializer')
+
+    def __init__(self, array_size_min: int, array_size_max: int, serializer: Serializer):
+        super().__init__(array_size_min * serializer.byte_size)
+        self.array_size_min = array_size_min
+        self.array_size_max = array_size_max
+        self.serializer = serializer
+
+    def is_constant_size(self) -> bool:
+        return self.array_size_min == self.array_size_max
+
+
 class ArrayMeta(SerializerMeta):
     def __getitem__(cls, args):
         is_array_type = (
@@ -56,51 +69,19 @@ class ArrayMeta(SerializerMeta):
 
         serializer = get_as_value(serializer)
         return type(get_type_name(cls), (cls,), {
-            '_array_size_min': size_min,
-            '_array_size_max': size_max,
-            '_serializer': serializer
+            SerializerMeta.METAATTR: ArrayMetadata(size_min, size_max, serializer)
         })
 
     def __repr__(cls) -> str:
+
         if cls.is_constant_size():
-            size = f'{cls._array_size_min}:{cls._array_size_max}'
+            size = f'{cls.__hydras_metadata__.array_size_min}:{cls.__hydras_metadata__.array_size_max}'
         else:
-            size = f'{cls._array_size_min}'
-        return f'<array <{cls._serializer}> [{size}]>'
-
-
-class Pad(Serializer):
-
-    """ A type formatter whose purpose is to act as a data-less padding."""
-
-    def __init__(self, length=1, *args, **kwargs):
-        """
-        Initialize this `Pad` instance.
-
-        :param length:  The size of this padding, in bytes.
-        """
-        self.length = length
-        super(Pad, self).__init__(b'\x00' * length, *args, **kwargs)
-
-    def __len__(self):
-        """ Return the size of this padding, in bytes."""
-        return self.length
-
-    def render(self, value, name):
-        from binascii import hexlify
-        return '{}: {}'.format(name, hexlify(value))
-
-    def format(self, value, settings=None):
-        return value
-
-    def parse(self, raw_data, settings=None):
-        return fit_bytes_to_size(raw_data, self.length)
+            size = f'{cls.__hydras_metadata__.array_size_min}'
+        return f'<array <{cls.__hydras_metadata__.serializer}> [{size}]>'
 
 
 class Array(Serializer, metaclass=ArrayMeta):
-    _array_size_min = _array_size_max = 0
-    _serializer = None
-
     """
     A type formatter which enables the developer to format a list of items.
 
@@ -123,65 +104,72 @@ class Array(Serializer, metaclass=ArrayMeta):
         :param args:            A paramater list to be passed to the base class.
         :param kwargs:          A paramater dict to be passed to the base class.
         """
-        self.byte_size = self._array_size_min * len(self._serializer)
-
         if default_value is None:
-            default_value = [copy.deepcopy(self._serializer.default_value) for _ in range(self._array_size_min)]
-        elif isinstance(default_value, bytes) and not isinstance(self._serializer, u8):
-            raise ValueError('Using `bytes` for an array value is only valid when the item type is `u8`')
+            default_value = [copy.deepcopy(self.serializer.default_value) for _ in range(self.min_size)]
+        elif isinstance(default_value, (bytes, bytearray)) and not isinstance(self.serializer, u8):
+            raise TypeError('Using `bytes` or `bytearray` for an array value is only valid when the item type is `u8`')
+        elif not isinstance(default_value, self.allowed_py_types):
+            raise TypeError('Default value of invalid type', default_value)
 
         super(Array, self).__init__(default_value, *args, **kwargs)
+
+    @property
+    def serializer(self):
+        return self.__hydras_metadata__.serializer
+
+    @property
+    def min_size(self):
+        return self.__hydras_metadata__.array_size_min
+
+    @property
+    def max_size(self):
+        return self.__hydras_metadata__.array_size_max
+
+    @property
+    def allowed_py_types(self):
+        base_list = (list, tuple)
+        if isinstance(self.serializer, u8):
+            base_list += (bytes, bytearray)
+        return base_list
 
     def format(self, value, settings=None):
         """ Return a serialized representation of this object. """
         settings = HydraSettings.resolve(self.settings, settings)
 
-        return padto(b''.join(self._serializer.format(s, settings) for s in value), len(self))
+        return padto(b''.join(self.serializer.format(s, settings) for s in value), self.byte_size)
 
     def parse(self, raw_data, settings=None):
-        fmt_size = len(self._serializer)
+        fmt_size = self.serializer.byte_size
 
-        if self._array_size_max is not None and \
-                len(raw_data) > self._array_size_max * fmt_size:
+        if self.max_size is not None and \
+                len(raw_data) > self.max_size * fmt_size:
             raise ValueError('Raw data is too long for array.')
-        elif len(raw_data) < self._array_size_min * fmt_size:
+        elif len(raw_data) < self.min_size * fmt_size:
             raise ValueError('Raw data is too short for array.')
         elif len(raw_data) % fmt_size != 0:
             raise ValueError('Raw data is not aligned to item size.')
 
         settings = HydraSettings.resolve(self.settings, settings)
 
-        parsed = [self._serializer.parse(raw_data[begin:begin+len(self._serializer)], settings)
-                  for begin in range(0, len(raw_data), len(self._serializer))]
+        parsed = [self.serializer.parse(raw_data[begin:begin+self.serializer.byte_size], settings)
+                  for begin in range(0, len(raw_data), self.serializer.byte_size)]
 
-        if isinstance(self.default_value, bytes):
-            parsed = bytes(parsed)
+        if isinstance(self.default_value, (bytes, bytearray)):
+            parsed = type(self.default_value)(parsed)
 
         return parsed
 
-    def __len__(self):
-        """ Return the size of this Array in bytes."""
-        return self.byte_size
-
-    @classmethod
-    def is_constant_size(cls):
-        return cls._array_size_min == cls._array_size_max
-
     def values_equal(self, a, b):
-        return len(a) == len(b) and all(self._serializer.values_equal(ai, bi) for ai, bi in zip(a, b))
+        return len(a) == len(b) and all(self.serializer.values_equal(ai, bi) for ai, bi in zip(a, b))
 
-    def validate_assignment(self, value):
-        allowed_types = (tuple, list)
-        if self._serializer is u8 or type(self._serializer) is u8:
-            allowed_types += (bytes, )
-
-        if not isinstance(value, allowed_types):
+    def validate(self, value) -> bool:
+        if not isinstance(value, self.allowed_py_types):
             raise TypeError('Assigned value must be a string, tuple, or a list.')
 
-        if self._array_size_max is not None and len(value) > self._array_size_max:
+        if self.max_size is not None and len(value) > self.max_size:
             raise ValueError('Assigned array length is incorrect.')
 
-        return all(self._serializer.validate_assignment(i) for i in value)
+        return all(self.serializer.validate(i) for i in value) and super(Array, self).validate(value)
 
     def get_actual_length(self, value):
-        return len(value) * len(self._serializer)
+        return len(value) * self.serializer.byte_size

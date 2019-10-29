@@ -54,14 +54,14 @@ class StructMeta(type):
                     elif member_name in members:
                         raise TypeError('Name-clash detected')
 
-                    if not fmt.is_constant_size():
+                    if not fmt.is_constant_size:
                         last_member = fmt
                     members[member_name] = fmt
 
             # Initialize a copy of the data properties.
             metadata = StructMetadata()
             metadata.name = name
-            metadata.size = sum(map(len, members.values()))
+            metadata.size = sum(m.byte_size for m in members.values())
             metadata.members = members
             metadata.is_constant_size = last_base is None and last_member is None
 
@@ -145,15 +145,15 @@ class Struct(metaclass=StructMeta):
         if len(raw_data) < len(class_object):
             raise ValueError('The supplied raw data is too short for a struct of type "%s"' % cls.get_name())
 
-        for name, formatter in cls._hydras_members().items():
-            if formatter.is_constant_size():
-                data_piece = raw_data[:len(formatter)]
-                raw_data = raw_data[len(formatter):]
+        for name, serializer in cls._hydras_members().items():
+            if serializer.is_constant_size:
+                data_piece = raw_data[:serializer.byte_size]
+                raw_data = raw_data[serializer.byte_size:]
             else:
                 data_piece = raw_data
                 raw_data = []
 
-            setattr(class_object, name, formatter.parse(data_piece, settings))
+            setattr(class_object, name, serializer.parse(data_piece, settings))
 
         if settings['validate'] and not class_object.validate():
             raise ValueError('The deserialized data is invalid.')
@@ -189,7 +189,7 @@ class Struct(metaclass=StructMeta):
 
         if not self.is_constant_size():
             name, last_member = next(reversed(self._hydras_members().items()))
-            length -= len(last_member)
+            length -= last_member.byte_size
             length += last_member.get_actual_length(getattr(self, name))
 
         return length
@@ -213,7 +213,7 @@ class Struct(metaclass=StructMeta):
         """ A validation of struct members using the dot-notation. """
         if hasattr(self, key):
             formatter = self._hydras_members()[key]
-            if not formatter.validate_assignment(value):
+            if not formatter.validate(value):
                 raise ValueError(f'Invalid value assigned to field "{key}"')
             self.__dict__[key] = value
         else:
@@ -257,13 +257,24 @@ class Struct(metaclass=StructMeta):
         return _create_array(item_count, self)
 
 
+class NestedStructMetadata(SerializerMetadata):
+    __slots__ = ('struct', )
+
+    def __init__(self, struct):
+        self.struct = struct
+        super(NestedStructMetadata, self).__init__(len(struct))
+
+    def is_constant_size(self) -> bool:
+        return self.struct.is_constant_size()
+
+
 class NestedStructMeta(SerializerMeta):
     def __getitem__(cls, struct_type_or_object):
         if not issubclass(get_as_type(struct_type_or_object), Struct):
             raise TypeError("struct_type_or_object should be either a Struct class or a Struct object.")
 
         return type(get_type_name(cls), (cls,), {
-            '_nested_object_type': get_as_value(struct_type_or_object)
+            SerializerMeta.METAATTR: NestedStructMetadata(get_as_value(struct_type_or_object))
         })
 
 
@@ -273,7 +284,9 @@ class NestedStruct(Serializer, metaclass=NestedStructMeta):
     This is an implementation detail and should not be directly used by the user.
     """
 
-    _nested_object_type: Struct = None
+    @property
+    def struct(self):
+        return self.__hydras_metadata__.struct
 
     def __init__(self, *args, **kwargs):
         """
@@ -282,20 +295,16 @@ class NestedStruct(Serializer, metaclass=NestedStructMeta):
         :param struct_type_or_object:   The type of the NestedStruct or Struct object.
         """
 
-        super(NestedStruct, self).__init__(copy.deepcopy(self._nested_object_type), *args, **kwargs)
-
-    @classmethod
-    def is_constant_size(cls):
-        return cls._nested_object_type.is_constant_size()
+        super(NestedStruct, self).__init__(copy.deepcopy(self.struct), *args, **kwargs)
 
     def format(self, value, settings=None):
         return value.serialize(settings)
 
     def parse(self, raw_data, settings=None):
-        return self._nested_object_type.deserialize(raw_data, settings)
+        return self.struct.deserialize(raw_data, settings)
 
-    def validate_assignment(self, value):
-        return True
+    def validate(self, value):
+        return isinstance(value, get_as_type(self.struct)) and value.validate()
 
     def validate(self, value) -> bool:
         return value.validate()
@@ -304,4 +313,4 @@ class NestedStruct(Serializer, metaclass=NestedStructMeta):
         return len(self.default_value)
 
     def __repr__(self):
-        return '<{} ({})>'.format(type(self).__name__, self._nested_object_type)
+        return '<{} ({})>'.format(type(self).__name__, self.struct)

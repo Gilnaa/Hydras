@@ -16,7 +16,7 @@ class ThatStruct(Struct):
 
     data = u16(0x55AA)
     indicator = u8(0xFA)
-    alignment = Pad()
+    alignment = u8
 
 
 class HasArray(Struct):
@@ -62,3 +62,9 @@ class VectorTests(HydrasTestCase):
         for v in wrong_types:
             with self.assertRaises(TypeError):
                 o.array = v
+
+    def test_default_value(self):
+        self.assertEqual(u16[2]([1]).default_value, [1])
+        self.assertEqual(u16[2]([1, 1]).default_value, [1, 1])
+        with self.assertRaises(ValueError):
+            u16[2]([1, 1, 1])

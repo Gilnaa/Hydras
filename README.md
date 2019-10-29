@@ -12,22 +12,19 @@ Newer version dropped Python2 support entirely.
 ## Roadmap ##
 This a list of features we want to implement before releasing Hydras 3.0
 
- * BitFields should not be defined inline.
- * Unions should not be defined inline.
- * Non field properties (maybe?)
- * Struct inheritance
+ * Add a bitfield-implementation
 
 ## Example ##
 ```python
 from hydras import *
 
 
-class Opcodes(EnumClass):
+class Opcodes(Enum, underlying_type=u8):
     KeepAlive = 3
     Data = 15
 
 class Header(Struct):
-    opcode = Opcodes(type_formatter=u8)
+    opcode = Opcodes
     data_length = u32
 
 class DataPacket(Struct):

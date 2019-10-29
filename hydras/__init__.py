@@ -14,10 +14,7 @@ from .struct import *
 # Serializers
 from .scalars import *
 # Only import Pad because the rest have a dedicated syntax
-from .array import Pad
-from .enum_class import *
-from .bitfield import *
-from .union import *
+from .enum import *
 
 # Misc.
 from .validators import *

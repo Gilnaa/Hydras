@@ -9,7 +9,7 @@ Contains the core classes of the framework.
 
 import copy
 import collections
-from typing import Any, Dict, Union as TypeUnion
+from typing import Any, Dict, Union as TypeUnion, Iterator
 
 from .validators import *
 
@@ -75,7 +75,19 @@ def _create_array(size: TypeUnion[int, slice], underlying_type):
     return Array[size, underlying_type]
 
 
+class SerializerMetadata:
+    __slots__ = ('size', )
+
+    def __init__(self, size):
+        self.size = size
+
+    def is_constant_size(self) -> bool:
+        return True
+
+
 class SerializerMeta(type):
+    METAATTR = '__hydras_metadata'
+
     def __getitem__(self, item_count):
         """
         This hack enables the familiar array syntax: `type[count]`.
@@ -83,19 +95,33 @@ class SerializerMeta(type):
         """
         return _create_array(item_count, self)
 
-    def __len__(self):
-        """
-        Enables the user to call `len(type)`.
-        For example, `len(u32) == len(u32()) == 4`
+    @property
+    def is_constant_size(cls) -> bool:
+        return cls.__hydras_metadata__.is_constant_size()
 
-        This only works for serializers with a parameterless constructor,
-        but we have no user-facing serializers whose constructors require a parameter.
-        """
-        return len(self())
+    @property
+    def byte_size(cls) -> int:
+        return cls.__hydras_metadata__.size
+
+    @property
+    def __hydras_metadata__(cls) -> SerializerMetadata:
+        return getattr(cls, cls.METAATTR)
 
 
 class Serializer(metaclass=SerializerMeta):
     """ The base type for Hydra's serializers. """
+
+    @property
+    def is_constant_size(self) -> bool:
+        return self.__hydras_metadata__.is_constant_size()
+
+    @property
+    def byte_size(self) -> int:
+        return self.__hydras_metadata__.size
+
+    @property
+    def __hydras_metadata__(self) -> SerializerMetadata:
+        return type(self).__hydras_metadata__
 
     def __init__(self, default_value, validator=None, settings=None):
         """
@@ -108,6 +134,9 @@ class Serializer(metaclass=SerializerMeta):
         self.validator = validator
         self.default_value = default_value
         self.settings = settings or {}
+
+        if not self.validate(default_value):
+            raise ValueError('Default value validation failed')
 
     def resolve_settings(self, overrides=None):
         """ Resolves the flat settings for a single action on this formatter. """
@@ -123,7 +152,7 @@ class Serializer(metaclass=SerializerMeta):
 
     def validate(self, value) -> bool:
         """
-        Validate the given value using this formatters rules.
+        Validate the given value using this serializer's rules.
 
         :param value:   The value to validate.
         :return:        `True` if the value is valid; `False` otherwise.
@@ -145,22 +174,9 @@ class Serializer(metaclass=SerializerMeta):
         """ Returns a displayable string for the given value. """
         return '%s: %s' % (name, value)
 
-    @classmethod
-    def is_constant_size(cls):
-        """ Indicates wether this type formatter emits constant-sized buffers. """
-        return True
-
-    def validate_assignment(self, value):
-        """ Validates a python value to make sure it is a sensible choice for this field. """
-        return True
-
     def get_actual_length(self, value):
         """ When used on variable length formatters, returns the actual serialized length of the given python value. """
-        return len(self)
-
-    def __len__(self):
-        """ Returns the length (byte size) of the formatter's type. """
-        raise NotImplementedError()
+        return self.byte_size
 
     def __getitem__(self, item_count):
         return _create_array(item_count, self)
