@@ -13,6 +13,7 @@ Newer version dropped Python2 support entirely.
 This a list of features we want to implement before releasing Hydras 3.0
 
  * Add a bitfield-implementation
+ * Enum as bit-flags
 
 ## Example ##
 ```python
@@ -89,6 +90,85 @@ class Message(Struct):
 
 Message().serialize() #=> b'\x00\x00\x00\x00\x00\x00\x00\x00\x80'
 ```
+
+## Types ##
+### Primitive Types ###
+"Primitive" types are integers and floating-point numbers, and are named similarly to Rust's primitive types.
+
+Integers come in signed and unsigned variants with bitsizes of 8, 16, 32, 64: `u8, i8, u16, etc...`
+
+Floating point are named `f32` and `f64`.
+
+When serializing, the endianness of a primitive is set to that of the "target" arch (as configured by the user); 
+the user can instead specify field-specific endianness by using the `_be` or `_le` variants (e.g. `u32_be`).
+
+### Enums ###
+Enums are closed sets of named values. By default they are serialized as if their underlying type is `u32` 
+```python
+from hydras import *
+
+
+class MyEnum(Enum):
+    a = 1
+    b = auto()
+    c = 10
+    d = auto()
+
+class SmallerEnum(Enum, underlying_type=u8):
+    a = 1
+    b = auto()
+    c = 10
+    d = auto()
+
+class MyStruct(Struct):
+    e = MyEnum
+    se = SmallerEnum(SmallerEnum.c)
+
+if __name__ == '__main__':
+    print(MyStruct().serialize())  # => b'\x01\x00\x00\x00\x0C'
+```
+  
+### Arrays ###
+An array can be created by appending a `[size]` or `[min_size:max_size]` to another type.
+The type of a `serializer[size]` expression is itself a serializer type.
+
+The python-value of an array can be either `list` or a `tuple`; if the value is shorter than
+that of the array, it will be padded with zeroes on serialization.
+
+When the type of the array is u8, the python value can also be `bytes` and `bytearray`. 
+
+For example:
+```python
+from hydras import *
+class Foo(Struct):
+    # Fixed length-arrays
+    byte_array = u8[32]
+    array_with_uniform_default_value = u16(57)[4]
+    array_with_nonuniform_default_value = u16[4]([1, 2, 3, 4])
+```
+
+Variable-length arrays can be created by giving a slice as the size of the array.
+
+```python
+# Variable-length array with at least 5 members
+u8[5:]
+# Variable-length array with up to 5 members (inclusive)
+u8[:5]
+# Variable-length array with between 6 and 8 members
+u8[6:8]
+# Unbound array
+u8[:]
+```
+
+Variable-length arrays, being VSTs (read more below), must be placed last in a struct.
+When deserializing, the tail of the buffer will be given to the array to parse. 
+The tail must match the VLA's size specification or an error will be raised.
+
+### Variable-length types ###
+Variable-length types (VST) can only be placed as the last member of a struct. 
+
+The most basic variable-length type is a VLA (Variable-length array; seen above).
+A struct whose last member is a VST is also a VST.
 
 ## Validators ##
 A validator object can be assigned to a struct data member to define validation rules.
