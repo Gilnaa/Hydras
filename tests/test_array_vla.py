@@ -105,9 +105,6 @@ class TestVLA(HydrasTestCase):
         class ValidDerivation(VLA):
             pass
 
-        class ValidMutiDerivation(ConstantSizeStruct, VLA):
-            pass
-
         with self.assertRaises(TypeError):
             class InvalidDerivation(VLA):
                 b = u8

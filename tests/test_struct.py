@@ -84,23 +84,16 @@ class StructTests(HydrasTestCase):
         self.assertEqual(simple.serialize() + b'\x00', derived.serialize())
         self.assertEqual(simple.serialize(), empty.serialize())
 
-    def test_multiple_derives(self):
+    def test_invalid_multiple_derives(self):
         class A(Struct):
-            a = u8(1)
+            a = u8
 
         class B(Struct):
-            b = u8(2)
+            b = u8
 
-        class C(A, B):
-            pass
-
-        class D(B, A):
-            pass
-
-        self.assertEqual(A().serialize(), b'\x01')
-        self.assertEqual(B().serialize(), b'\x02')
-        self.assertEqual(C().serialize(), b'\x01\x02')
-        self.assertEqual(D().serialize(), b'\x02\x01')
+        with self.assertRaises(TypeError):
+            class C(A, B):
+                pass
 
 
 if __name__ == '__main__':

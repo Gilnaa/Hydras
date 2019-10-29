@@ -55,17 +55,8 @@ class ArrayMeta(SerializerMeta):
         else:
             raise TypeError(f'Expected int or a slice as array size, got {get_type_name(size)}')
 
-        ######
-        t = get_as_type(serializer)
-        # type is a Struct type/class.
-        if issubclass(t, Struct):
-            serializer = NestedStruct[serializer]()
-        # type is a Scalar class.
-        elif issubclass(t, Serializer):
-            serializer = get_as_value(serializer)
-        else:
-            raise TypeError('Array: items_type should be a Serializer or a Struct')
-        ######
+        if not issubclass(type(serializer), Serializer):
+            raise TypeError('Array: items_type must be a Serializer')
 
         serializer = get_as_value(serializer)
         return type(get_type_name(cls), (cls,), {
@@ -73,7 +64,6 @@ class ArrayMeta(SerializerMeta):
         })
 
     def __repr__(cls) -> str:
-
         if cls.is_constant_size():
             size = f'{cls.__hydras_metadata__.array_size_min}:{cls.__hydras_metadata__.array_size_max}'
         else:

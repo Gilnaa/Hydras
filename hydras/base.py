@@ -60,12 +60,6 @@ class HydraSettings(object):
         return cls.snapshot()
 
 
-def _create_array(size: TypeUnion[int, slice], underlying_type):
-    # Importing locally in order to avoid weird import-cycle issues
-    from .array import Array
-    return Array[size, underlying_type]
-
-
 class SerializerMetadata:
     __slots__ = ('size', )
 
@@ -84,7 +78,7 @@ class SerializerMeta(type):
         This hack enables the familiar array syntax: `type[count]`.
         For example, a 3-item array of type uint8_t might look like `uint8_t[3]`.
         """
-        return _create_array(item_count, self)
+        return create_array(item_count, self())
 
     @property
     def is_constant_size(cls) -> bool:
@@ -166,4 +160,4 @@ class Serializer(metaclass=SerializerMeta):
         return self.byte_size
 
     def __getitem__(self, item_count):
-        return _create_array(item_count, self)
+        return create_array(item_count, self)

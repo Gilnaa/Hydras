@@ -1,5 +1,7 @@
 from .base import *
-from .base import _create_array
+from .utils import *
+
+__all__ = ('Struct', )
 
 
 class StructMetadata(object):
@@ -22,10 +24,11 @@ class StructMeta(type):
             # Likewise, the same handling is done for VST members
             last_member = None
 
-            for base in bases:
-                if not issubclass(type(base), StructMeta):
-                    raise TypeError('Hydras structs can only derive other structs')
+            hydras_bases = [b for b in bases if isinstance(b, StructMeta)]
+            if len(hydras_bases) > 1:
+                raise TypeError('Multiple inheritance of Hydras structs is prohibited.')
 
+            for base in hydras_bases:
                 if last_base is not None and len(base._hydras_members()) > 0:
                     raise TypeError('When deriving a variable-length struct, it must be last in the inheritance list')
 
@@ -76,7 +79,7 @@ class StructMeta(type):
         return collections.OrderedDict()
 
     def __getitem__(cls, item_count):
-        return _create_array(item_count, cls)
+        return create_array(item_count, NestedStruct[cls]())
 
 
 class Struct(metaclass=StructMeta):
@@ -217,7 +220,7 @@ class Struct(metaclass=StructMeta):
                 raise ValueError(f'Invalid value assigned to field "{key}"')
             self.__dict__[key] = value
         else:
-            raise KeyError('Assigned type is not part of the struct %s: %s' % (str(key), str(value)))
+            raise KeyError('Assigned field is not part of the struct %s: %s' % (str(key), str(value)))
 
     def __repr__(self):
         return repr(dict(self))
@@ -243,7 +246,7 @@ class Struct(metaclass=StructMeta):
         This hack enables the familiar array syntax: `type()[count]`.
         For example, a 3-item array of type uint16_t might look like `uint16_t(default_value=5)[3]`.
         """
-        return _create_array(item_count, self)
+        return create_array(item_count, NestedStruct[self]())
 
 
 class NestedStructMetadata(SerializerMetadata):

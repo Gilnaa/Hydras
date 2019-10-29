@@ -26,6 +26,12 @@ class Endianness(enum.Enum):
         return self == Endianness.LITTLE or (self == Endianness.HOST and sys.byteorder == 'little')
 
 
+def create_array(size: TypeUnion[int, slice], underlying_type):
+    # Importing locally in order to avoid weird import-cycle issues
+    from .array import Array
+    return Array[size, underlying_type]
+
+
 def fit_bytes_to_size(byte_string, length):
     """
     Ensure the given byte_string is in the correct length

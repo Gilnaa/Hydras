@@ -200,7 +200,7 @@ The user can use a lambda expression (or any function) instead of a validator ob
 
 ```python
 class MeIsLambda(Struct):
-    member = int8_t(0, validator=lambda value: value % 3 == 0)
+    member = i8(0, validator=lambda value: value % 3 == 0)
 ```
 
 ## Hooks ##
