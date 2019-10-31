@@ -13,15 +13,16 @@ import struct
 
 
 class ScalarMetadata(SerializerMetadata):
+    __slots__ = ('endianness', 'fmt', 'validator', 'py_types')
     _FORMATTERS_INFO = {
-        'B': (1, (int), RangeValidator(0, 255)),
-        'b': (1, (int), RangeValidator(-128, 127)),
-        'H': (2, (int), RangeValidator(0, 65535)),
-        'h': (2, (int), RangeValidator(-32768, 32767)),
-        'I': (4, (int), RangeValidator(0, 4294967295)),
-        'i': (4, (int), RangeValidator(-2147483648, 2147483647)),
-        'Q': (8, (int), RangeValidator(0, 18446744073709551615)),
-        'q': (8, (int), RangeValidator(-9223372036854775808, 9223372036854775807)),
+        'B': (1, (int, ), RangeValidator(0, 255)),
+        'b': (1, (int, ), RangeValidator(-128, 127)),
+        'H': (2, (int, ), RangeValidator(0, 65535)),
+        'h': (2, (int, ), RangeValidator(-32768, 32767)),
+        'I': (4, (int, ), RangeValidator(0, 4294967295)),
+        'i': (4, (int, ), RangeValidator(-2147483648, 2147483647)),
+        'Q': (8, (int, ), RangeValidator(0, 18446744073709551615)),
+        'q': (8, (int, ), RangeValidator(-9223372036854775808, 9223372036854775807)),
         'f': (4, (int, float), TrueValidator),
         'd': (8, (int, float), TrueValidator),
     }

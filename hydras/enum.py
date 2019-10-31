@@ -35,12 +35,13 @@ class Literal:
 
 
 class EnumMetadata(SerializerMetadata):
+    __slots__ = ('flags', 'serializer', 'literals')
     _VALID_UNDERLYING_TYPES = (
         u8, u16, u32, u64, i8, i16, i32, i64,
         u8_le, u16_le, u32_le, u64_le, i8_le, i16_le, i32_le, i64_le,
         u8_be, u16_be, u32_be, u64_be, i8_be, i16_be, i32_be, i64_be)
 
-    def __init__(self, *, literals: collections.OrderedDict, underlying: Type['Scalar'] = i32, flags: bool = False):
+    def __init__(self, *, literals: collections.OrderedDict, underlying: Type['Scalar'], flags: bool = False):
         super().__init__(underlying.byte_size)
 
         if underlying not in self._VALID_UNDERLYING_TYPES:
@@ -58,7 +59,7 @@ class EnumMetadata(SerializerMetadata):
 
 
 class EnumMeta(SerializerMeta):
-    def __new__(mcs, name, bases, classdict: collections.OrderedDict, underlying_type=u32):
+    def __new__(mcs, name, bases, classdict: collections.OrderedDict, underlying_type=i32):
         if not hasattr(mcs, SerializerMeta.METAATTR):
             literals = (
                 (k, v) for k, v in classdict.items()
@@ -111,16 +112,24 @@ class Enum(Serializer, metaclass=EnumMeta):
 
     """ An enum formatter that can be shared between structs. """
     def __init__(self, default_value=None, *args, **kwargs):
+        if type(self) is Enum:
+            raise RuntimeError('Cannot instantiate `Enum` directly. Must subclass it.')
+
+        assert default_value is None or isinstance(default_value, (int, Literal))
 
         # Validate the default_value
         if default_value is None:
-            lit_name, default_value = next(iter(self.literals.items()))
+            default_value = self.get_literal_by_name(next(iter(self.literals)))
         elif isinstance(default_value, int):
             if not self.is_constant_valid(default_value):
                 raise ValueError('Literal constant is not included in the enum: %d' % default_value)
-            lit_name = self.get_const_name(default_value)
+            default_value = self.get_literal_by_value(default_value)
+        elif isinstance(default_value, Literal):
+            if default_value.enum is not type(self) or \
+                    not self.is_constant_valid(default_value.value) or \
+                    default_value.literal_name not in self.literals:
+                raise ValueError('Invalid or corrupted literal')
 
-        default_value = Literal(type(self), lit_name, default_value)
         super(Enum, self).__init__(default_value, *args, **kwargs)
 
     def format(self, value: Literal, settings=None):
@@ -135,7 +144,7 @@ class Enum(Serializer, metaclass=EnumMeta):
         if not self.is_constant_valid(value):
             raise ValueError('Parsed enum value is unknown: %d' % value)
 
-        return Literal(type(self), self.get_const_name(value) or '<invalid>', value)
+        return Literal(type(self), self.get_literal_name(value) or '<invalid>', value)
 
     def validate(self, value):
         """ Validate the given enum value. """
@@ -148,9 +157,15 @@ class Enum(Serializer, metaclass=EnumMeta):
         """ Determine if the given number is a valid enum literal. """
         return num in self.literals.values()
 
-    def get_const_name(self, num):
+    def get_literal_name(self, num):
         """ Get the name of the constant from a number or a Literal object. """
         return next((n for n, v in self.literals.items() if v == num), None)
+
+    def get_literal_by_name(self, name):
+        return Literal(type(self), name, self.literals[name])
+
+    def get_literal_by_value(self, value):
+        return Literal(type(self), self.get_literal_name(value), value)
 
     def values_equal(self, a, b):
         return int(a) == int(b)

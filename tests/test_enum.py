@@ -20,7 +20,7 @@ class EOpcodeThingie(Enum):
 
 
 class StructThingie(Struct):
-    opcode = EOpcodeThingie
+    opcode = EOpcodeThingie(EOpcodeThingie.a)
     pad = u8(0xFF)
 
 
@@ -68,6 +68,10 @@ class EnumClassTests(HydrasTestCase):
     def test_enum_array(self):
         enarr = EOpcodeThingie[2]()
         self.assertEqual(enarr.format((EOpcodeThingie.a, EOpcodeThingie.b)), b'\x00\x00\x00\x00\x01\x00\x00\x00')
+
+    def test_direct_enum_instantiation(self):
+        with self.assertRaises(RuntimeError):
+            a = Enum()
 
 
 if __name__ == '__main__':

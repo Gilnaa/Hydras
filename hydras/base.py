@@ -10,7 +10,7 @@ Contains the core classes of the framework.
 import copy
 import collections
 from typing import Any, Dict, Union as TypeUnion, Iterator
-
+from abc import ABCMeta, abstractmethod
 from .validators import *
 
 
@@ -70,7 +70,7 @@ class SerializerMetadata:
         return True
 
 
-class SerializerMeta(type):
+class SerializerMeta(ABCMeta):
     METAATTR = '__hydras_metadata'
 
     def __getitem__(self, item_count):
@@ -127,10 +127,12 @@ class Serializer(metaclass=SerializerMeta):
         """ Resolves the flat settings for a single action on this formatter. """
         return HydraSettings.resolve(overrides, self.settings)
 
+    @abstractmethod
     def format(self, value, settings=None) -> bytes:
         """ When implemented in derived classes, returns the byte representation of the give value. """
         raise NotImplementedError()
 
+    @abstractmethod
     def parse(self, raw_data, settings=None):
         """ When implemented in derived classes, parses the raw data. """
         raise NotImplementedError()
