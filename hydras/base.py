@@ -128,12 +128,12 @@ class Serializer(metaclass=SerializerMeta):
         return HydraSettings.resolve(overrides, self.settings)
 
     @abstractmethod
-    def format(self, value, settings=None) -> bytes:
+    def serialize(self, value, settings=None) -> bytes:
         """ When implemented in derived classes, returns the byte representation of the give value. """
         raise NotImplementedError()
 
     @abstractmethod
-    def parse(self, raw_data, settings=None):
+    def deserialize(self, raw_data, settings=None):
         """ When implemented in derived classes, parses the raw data. """
         raise NotImplementedError()
 

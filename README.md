@@ -15,22 +15,28 @@ This a list of features we want to implement before releasing Hydras 3.0
  * Add a bitfield-implementation
  * Enum as bit-flags
 
+Contributions are welcome.
+
 ## Example ##
+The 'examples' directory is old, not informative, and in pretty bad shape, but the CI does make sure
+that the code there is working.
+
+Instead, here's 
 ```python
 from hydras import *
 
 
 class Opcodes(Enum, underlying_type=u8):
-    KeepAlive = 3
-    Data = 15
+    KEEP_ALIVE = 3
+    DATA = 15
 
 class Header(Struct):
     opcode = Opcodes
     data_length = u32
 
 class DataPacket(Struct):
-    # A nested structure. "DataLength = 128" sets the default DataLength value for `Header`s inside `DataPacket`s
-    header = Header(opcode=Opcodes.Data, data_length=128)
+    # A nested structure. "data_length = 128" sets the default DataLength value for `Header`s inside `DataPacket`s
+    header = Header(opcode=Opcodes.DATA, data_length=128)
 
     # Creates an array of bytes with a length of 128 bytes.
     payload = u8[128]
@@ -50,6 +56,8 @@ if __name__ == '__main__':
     
     # You can transform the object into a byte string using the `serialize` method.
     zeroes = packet.serialize()  # => b'\x0f\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+    # Alternatively,
+    zeroes = bytes(packet)
     
     # You can also modify the object naturally.
     packet.payload = bytes(range(128))
@@ -145,6 +153,24 @@ class Foo(Struct):
     byte_array = u8[32]
     array_with_uniform_default_value = u16(57)[4]
     array_with_nonuniform_default_value = u16[4]([1, 2, 3, 4])
+
+
+if __name__ == '__main__':
+    f = Foo()
+    f.byte_array = b'123'  # This will be padded with zeroes
+```
+
+If the default value of the array is a `bytes` or `bytearray` object, Hydras will deserialize to that type.
+
+```python
+from hydras import *
+class Bar(Struct):
+    byte_array = u8[4](default_value=bytearray())
+
+
+if __name__ == '__main__':
+    print(Bar.deserialize(b'\x00\x11\x22\x33').byte_array)
+    # => bytearray(b'\x00\x01\x02\x03')
 ```
 
 Variable-length arrays can be created by giving a slice as the size of the array.
@@ -169,6 +195,11 @@ Variable-length types (VST) can only be placed as the last member of a struct.
 
 The most basic variable-length type is a VLA (Variable-length array; seen above).
 A struct whose last member is a VST is also a VST.
+
+## Endianness ##
+Integral fields not suffixed with `_be` or `_le` will take the endianness of the "target".
+The target endian by default is the same as that of the host machine, but can be configured by modifying `HydraSettings`
+or by specifying serialization-time settings.
 
 ## Validators ##
 A validator object can be assigned to a struct data member to define validation rules.

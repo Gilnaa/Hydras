@@ -10,7 +10,7 @@ from hydras import *
 class StructName(Struct):
     FieldName = u32        # Unsigned; 4 bytes.
     AnotherField = u8(87)  # Signed; 1 byte. Default value is 87
-    SpareForAlignment = Pad(3)  # Padding. Translates to zeros.
+    SpareForAlignment = u8[3]  # Padding.
     ThirdField = u64       # Signed; 8 bytes.
 
 

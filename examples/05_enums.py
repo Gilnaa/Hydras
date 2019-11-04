@@ -20,10 +20,16 @@ class Opcodes(Enum):
     Nack = auto()
 
 
+class Status(Enum, underlying_type=u8):
+    OK = auto()
+    Corrupted = auto()
+    Unknown = auto()
+
+
 class AnotherHeader(Struct):
     opcode = Opcodes
     different_default = Opcodes(Opcodes.Data)
-    smaller_opcode = Opcodes(type_formatter=u8)
+    status = Status
     timestamp = u64
 
 

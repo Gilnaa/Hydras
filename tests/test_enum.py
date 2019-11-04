@@ -67,7 +67,7 @@ class EnumClassTests(HydrasTestCase):
 
     def test_enum_array(self):
         enarr = EOpcodeThingie[2]()
-        self.assertEqual(enarr.format((EOpcodeThingie.a, EOpcodeThingie.b)), b'\x00\x00\x00\x00\x01\x00\x00\x00')
+        self.assertEqual(enarr.serialize((EOpcodeThingie.a, EOpcodeThingie.b)), b'\x00\x00\x00\x00\x01\x00\x00\x00')
 
     def test_direct_enum_instantiation(self):
         with self.assertRaises(RuntimeError):

@@ -102,10 +102,6 @@ class Struct(metaclass=StructMeta):
                 setattr(self, var_name, copy.deepcopy(var_formatter.default_value))
 
     @classmethod
-    def get_name(cls):
-        return cls.__name__
-
-    @classmethod
     def _hydras_metadata(cls) -> StructMetadata:
         return getattr(cls, StructMeta.HYDRAS_METAATTR, None)
 
@@ -129,7 +125,7 @@ class Struct(metaclass=StructMeta):
         if not settings['dry_run']:
             self.before_serialize()
 
-        output = b''.join(formatter.format(getattr(self, name), settings)
+        output = b''.join(formatter.serialize(getattr(self, name), settings)
                           for name, formatter in self._hydras_members().items())
 
         if not settings['dry_run']:
@@ -146,7 +142,7 @@ class Struct(metaclass=StructMeta):
         class_object = cls()
 
         if len(raw_data) < len(class_object):
-            raise ValueError('The supplied raw data is too short for a struct of type "%s"' % cls.get_name())
+            raise ValueError('The supplied raw data is too short for a struct of type "%s"' % get_type_name(cls))
 
         for name, serializer in cls._hydras_members().items():
             if serializer.is_constant_size:
@@ -156,7 +152,7 @@ class Struct(metaclass=StructMeta):
                 data_piece = raw_data
                 raw_data = []
 
-            setattr(class_object, name, serializer.parse(data_piece, settings))
+            setattr(class_object, name, serializer.deserialize(data_piece, settings))
 
         if settings['validate'] and not class_object.validate():
             raise ValueError('The deserialized data is invalid.')
@@ -197,6 +193,9 @@ class Struct(metaclass=StructMeta):
 
         return length
 
+    def __bytes__(self):
+        return self.serialize()
+
     def __eq__(self, other):
         """ Equates two objects. """
         if type(other) != type(self):
@@ -214,16 +213,12 @@ class Struct(metaclass=StructMeta):
 
     def __setattr__(self, key, value):
         """ A validation of struct members using the dot-notation. """
-        if hasattr(self, key):
+        if key in self._hydras_members():
             formatter = self._hydras_members()[key]
             if not formatter.validate(value):
                 raise ValueError(f'Invalid value assigned to field "{key}"')
-            self.__dict__[key] = value
-        else:
-            raise KeyError('Assigned field is not part of the struct %s: %s' % (str(key), str(value)))
 
-    def __repr__(self):
-        return repr(dict(self))
+        super(Struct, self).__setattr__(key, value)
 
     def __iter__(self):
         """ Support conversion to dict """
@@ -289,10 +284,10 @@ class NestedStruct(Serializer, metaclass=NestedStructMeta):
 
         super(NestedStruct, self).__init__(copy.deepcopy(self.struct), *args, **kwargs)
 
-    def format(self, value, settings=None):
+    def serialize(self, value, settings=None):
         return value.serialize(settings)
 
-    def parse(self, raw_data, settings=None):
+    def deserialize(self, raw_data, settings=None):
         return self.struct.deserialize(raw_data, settings)
 
     def validate(self, value):

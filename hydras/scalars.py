@@ -23,8 +23,8 @@ class ScalarMetadata(SerializerMetadata):
         'i': (4, (int, ), RangeValidator(-2147483648, 2147483647)),
         'Q': (8, (int, ), RangeValidator(0, 18446744073709551615)),
         'q': (8, (int, ), RangeValidator(-9223372036854775808, 9223372036854775807)),
-        'f': (4, (int, float), TrueValidator),
-        'd': (8, (int, float), TrueValidator),
+        'f': (4, (int, float), TrueValidator()),
+        'd': (8, (int, float), TrueValidator()),
     }
 
     def __init__(self, *, fmt: str, endianness: Endianness):
@@ -69,14 +69,14 @@ class Scalar(Serializer, metaclass=ScalarMeta):
         :param endian:          The endian of this formatter.
         """
         super(Scalar, self).__init__(default_value, *args, **kwargs)
-        self._length = len(self.format(0))
+        self._length = len(self.serialize(0))
 
     def validate(self, value):
         return isinstance(value, self.py_types) and \
                self.primitive_validator.validate(value) and \
                super(Scalar, self).validate(value)
 
-    def format(self, value, settings=None):
+    def serialize(self, value, settings=None):
         settings = self.resolve_settings(settings)
 
         if self.endianness == Endianness.TARGET:
@@ -86,7 +86,7 @@ class Scalar(Serializer, metaclass=ScalarMeta):
 
         return struct.pack(endian.value + self.fmt, value)
 
-    def parse(self, raw_data, settings=None):
+    def deserialize(self, raw_data, settings=None):
         return struct.unpack(self.fmt, raw_data)[0]
 
 

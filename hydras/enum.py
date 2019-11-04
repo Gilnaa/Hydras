@@ -49,9 +49,10 @@ class EnumMetadata(SerializerMetadata):
         serializer = get_as_value(underlying)
         try:
             for k, v in literals.items():
-                serializer.validate(v)
+                if not serializer.validate(v):
+                    raise ValueError('<unknown error>')
         except ValueError as e:
-            raise ValueError(f'Invalid value for literal {v}: {e.message}')
+            raise ValueError(f'Invalid value for literal {v}: {e}')
 
         self.flags = flags
         self.serializer = serializer
@@ -114,6 +115,8 @@ class Enum(Serializer, metaclass=EnumMeta):
     def __init__(self, default_value=None, *args, **kwargs):
         if type(self) is Enum:
             raise RuntimeError('Cannot instantiate `Enum` directly. Must subclass it.')
+        elif len(self.literals) == 0:
+            raise RuntimeError('Cannot instantiate an empty Enum')
 
         assert default_value is None or isinstance(default_value, (int, Literal))
 
@@ -132,14 +135,14 @@ class Enum(Serializer, metaclass=EnumMeta):
 
         super(Enum, self).__init__(default_value, *args, **kwargs)
 
-    def format(self, value: Literal, settings=None):
+    def serialize(self, value: Literal, settings=None):
         assert (isinstance(value, Literal) and value.enum == type(self)) or \
                (isinstance(value, int) and self.is_constant_valid(value))
 
-        return self.serializer.format(int(value), self.resolve_settings(settings))
+        return self.serializer.serialize(int(value), self.resolve_settings(settings))
 
-    def parse(self, raw_data, settings=None):
-        value = self.serializer.parse(raw_data, self.resolve_settings(settings))
+    def deserialize(self, raw_data, settings=None):
+        value = self.serializer.deserialize(raw_data, self.resolve_settings(settings))
 
         if not self.is_constant_valid(value):
             raise ValueError('Parsed enum value is unknown: %d' % value)
@@ -169,6 +172,3 @@ class Enum(Serializer, metaclass=EnumMeta):
 
     def values_equal(self, a, b):
         return int(a) == int(b)
-
-    def __iter__(self):
-        return iter(self.literals.items())

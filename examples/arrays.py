@@ -12,7 +12,7 @@ from hydras import *
 
 class SmallStruct(Struct):
     member = u16
-    spare = Pad(2)
+    spare = u8[2]
 
 
 class ThisIsAStruct(Struct):

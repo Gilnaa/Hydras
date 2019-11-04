@@ -42,7 +42,7 @@ class StructTests(HydrasTestCase):
     def test_serialize_simple(self):
         """ Test serialization of a simple struct. """
         obj = SimpleStruct()
-        raw_data = obj.serialize()
+        raw_data = bytes(obj)
         self.assertEqual(raw_data, b'\xDE\xFE\xCA\xAD')
 
     def test_one_does_not_complicatedly(self):

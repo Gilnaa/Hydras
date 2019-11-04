@@ -19,7 +19,7 @@ class SomeHeader(Struct):
 
 
 class SomePacket(Struct):
-    header = NestedStruct(SomeHeader)
+    header = SomeHeader
     data = u8[12]
 
 

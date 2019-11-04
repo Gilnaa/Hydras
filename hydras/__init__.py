@@ -13,7 +13,6 @@ from .struct import *
 
 # Serializers
 from .scalars import *
-# Only import Pad because the rest have a dedicated syntax
 from .enum import *
 
 # Misc.

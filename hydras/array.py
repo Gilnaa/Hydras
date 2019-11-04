@@ -13,6 +13,8 @@ from .scalars import *
 from .utils import *
 import copy
 
+BYTE_TYPES = (u8, u8_be, u8_le)
+
 
 class ArrayMetadata(SerializerMetadata):
     __slots__ = ('array_size_min', 'array_size_max', 'serializer')
@@ -96,7 +98,7 @@ class Array(Serializer, metaclass=ArrayMeta):
         """
         if default_value is None:
             default_value = [copy.deepcopy(self.serializer.default_value) for _ in range(self.min_size)]
-        elif isinstance(default_value, (bytes, bytearray)) and not isinstance(self.serializer, u8):
+        elif isinstance(default_value, (bytes, bytearray)) and not isinstance(self.serializer, BYTE_TYPES):
             raise TypeError('Using `bytes` or `bytearray` for an array value is only valid when the item type is `u8`')
         elif not isinstance(default_value, self.allowed_py_types):
             raise TypeError('Default value of invalid type', default_value)
@@ -118,17 +120,17 @@ class Array(Serializer, metaclass=ArrayMeta):
     @property
     def allowed_py_types(self):
         base_list = (list, tuple)
-        if isinstance(self.serializer, u8):
+        if isinstance(self.serializer, BYTE_TYPES):
             base_list += (bytes, bytearray)
         return base_list
 
-    def format(self, value, settings=None):
+    def serialize(self, value, settings=None):
         """ Return a serialized representation of this object. """
         settings = HydraSettings.resolve(self.settings, settings)
 
-        return padto(b''.join(self.serializer.format(s, settings) for s in value), self.byte_size)
+        return padto(b''.join(self.serializer.serialize(s, settings) for s in value), self.byte_size)
 
-    def parse(self, raw_data, settings=None):
+    def deserialize(self, raw_data, settings=None):
         fmt_size = self.serializer.byte_size
 
         if self.max_size is not None and \
@@ -141,7 +143,7 @@ class Array(Serializer, metaclass=ArrayMeta):
 
         settings = HydraSettings.resolve(self.settings, settings)
 
-        parsed = [self.serializer.parse(raw_data[begin:begin+self.serializer.byte_size], settings)
+        parsed = [self.serializer.deserialize(raw_data[begin:begin + self.serializer.byte_size], settings)
                   for begin in range(0, len(raw_data), self.serializer.byte_size)]
 
         if isinstance(self.default_value, (bytes, bytearray)):
