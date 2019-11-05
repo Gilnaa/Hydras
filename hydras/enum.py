@@ -18,7 +18,10 @@ __all__ = ('Enum', 'auto')
 
 
 class auto:
-    pass
+    # This is implemented solely to satisfy PyCharm's type-checker.
+    # In reality this function will never be called
+    def __int__(self):
+        raise RuntimeError('This is not supposed to happen')
 
 
 class Literal:
