@@ -72,22 +72,32 @@ class Scalar(Serializer, metaclass=ScalarMeta):
         self._length = len(self.serialize(0))
 
     def validate(self, value):
-        return isinstance(value, self.py_types) and \
-               self.primitive_validator.validate(value) and \
-               super(Scalar, self).validate(value)
+        if not isinstance(value, self.py_types):
+            raise TypeError(f'Expected value of type {self.py_types}, but got {type(value)}')
+        elif not self.primitive_validator(value):
+            raise ValueError('Value outside of type bounds')
 
-    def serialize(self, value, settings=None):
-        settings = self.resolve_settings(settings)
+        super(Scalar, self).validate(value)
+
+    def serialize(self, value, settings: HydraSettings = None):
+        settings = HydraSettings.resolve(settings)
 
         if self.endianness == Endianness.TARGET:
-            endian = settings['target_endian']
+            endian = settings.target_endian
         else:
             endian = self.endianness
 
         return struct.pack(endian.value + self.fmt, value)
 
-    def deserialize(self, raw_data, settings=None):
-        return struct.unpack(self.fmt, raw_data)[0]
+    def deserialize(self, raw_data, settings: HydraSettings = None):
+        settings = HydraSettings.resolve(settings)
+
+        if self.endianness == Endianness.TARGET:
+            endian = settings.target_endian
+        else:
+            endian = self.endianness
+
+        return struct.unpack(endian.value + self.fmt, raw_data)[0]
 
 
 # Target endian scalars

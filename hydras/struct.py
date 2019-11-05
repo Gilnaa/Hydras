@@ -99,7 +99,8 @@ class Struct(metaclass=StructMeta):
             if var_name in kwargs:
                 setattr(self, var_name, kwargs[var_name])
             else:
-                setattr(self, var_name, copy.deepcopy(var_formatter.default_value))
+                # Call base setattr to avoid validation of default values
+                super().__setattr__(var_name, copy.deepcopy(var_formatter.default_value))
 
     @classmethod
     def _hydras_metadata(cls) -> StructMetadata:
@@ -113,22 +114,22 @@ class Struct(metaclass=StructMeta):
     def is_constant_size(cls):
         return cls._hydras_metadata().is_constant_size
 
-    def serialize(self, settings: Dict[str, Any] = None):
+    def serialize(self, settings: HydraSettings = None):
         """
         Serialize this struct into a byte string.
 
         :param settings:    [Optional] Serialization settings overrides.
         :return: A byte-string representing the struct.
         """
-        settings = HydraSettings.resolve(settings)
+        settings = settings or HydraSettings()
 
-        if not settings['dry_run']:
+        if not settings.dry_run:
             self.before_serialize()
 
         output = b''.join(formatter.serialize(getattr(self, name), settings)
                           for name, formatter in self._hydras_members().items())
 
-        if not settings['dry_run']:
+        if not settings.dry_run:
             self.after_serialize()
 
         return output
@@ -152,10 +153,16 @@ class Struct(metaclass=StructMeta):
                 data_piece = raw_data
                 raw_data = []
 
-            setattr(class_object, name, serializer.deserialize(data_piece, settings))
+            # Call base setattr in order to avoid validation
+            try:
+                value = serializer.deserialize(data_piece, settings)
+            except Exception as e:
+                raise ValidationError(data_piece, name, class_object, e)
 
-        if settings['validate'] and not class_object.validate():
-            raise ValueError('The deserialized data is invalid.')
+            super(cls, class_object).__setattr__(name, value)
+
+        if settings.validate:
+            class_object.validate()
 
         return class_object
 
@@ -172,11 +179,12 @@ class Struct(metaclass=StructMeta):
 
     def validate(self):
         """ Determine the validity of the object's data. """
-        for formatter_name, formatter in self._hydras_members().items():
-            value = getattr(self, formatter_name)
-            if not formatter.validate(value):
-                raise ValueError('Field \'{}\' got an invalid value: {}.'.format(formatter_name, value))
-        return True
+        for field_name, formatter in self._hydras_members().items():
+            value = getattr(self, field_name)
+            try:
+                formatter.validate(value)
+            except Exception as e:
+                raise ValidationError(value, field_name, self, e)
 
     ###################
     #    Operators    #
@@ -213,10 +221,8 @@ class Struct(metaclass=StructMeta):
 
     def __setattr__(self, key, value):
         """ A validation of struct members using the dot-notation. """
-        if key in self._hydras_members():
-            formatter = self._hydras_members()[key]
-            if not formatter.validate(value):
-                raise ValueError(f'Invalid value assigned to field "{key}"')
+        if HydraSettings.validate and key in self._hydras_members():
+            self._hydras_members()[key].validate(value)
 
         super(Struct, self).__setattr__(key, value)
 
@@ -293,8 +299,8 @@ class NestedStruct(Serializer, metaclass=NestedStructMeta):
     def validate(self, value):
         return isinstance(value, get_as_type(self.struct)) and value.validate()
 
-    def validate(self, value) -> bool:
-        return value.validate()
+    def validate(self, value):
+        value.validate()
 
     def __len__(self):
         return len(self.default_value)

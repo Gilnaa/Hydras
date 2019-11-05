@@ -9,12 +9,12 @@ Contains the core classes of the framework.
 
 import copy
 import collections
-from typing import Any, Dict, Union as TypeUnion, Iterator
+from typing import Any, Dict, Union, Iterator, Callable
 from abc import ABCMeta, abstractmethod
 from .validators import *
 
 
-class HydraSettings(object):
+class HydraSettings:
     """ Contains global default settings. """
 
     # Determines whether the serialize hooks will be called.
@@ -26,16 +26,26 @@ class HydraSettings(object):
     # The endianness of the "target" CPU. By the default is the same as the host.
     target_endian = Endianness.HOST
 
+    def __init__(self, *,
+                 dry_run: bool = None,
+                 validate: bool = None,
+                 target_endian: Endianness = None):
+
+        super().__init__()
+
+        if dry_run is not None:
+            self.dry_run = dry_run
+
+        if validate is not None:
+            self.validate = validate
+
+        if target_endian is not None:
+            self.target_endian = target_endian
+
     @classmethod
-    def resolve(cls, *args):
+    def resolve(cls, settings):
         """ Resolve settings dictionaries."""
-        global_settings = cls.snapshot()
-
-        for overrides in args:
-            if overrides is not None and isinstance(overrides, dict):
-                global_settings.update(overrides)
-
-        return global_settings
+        return settings or cls()
 
     @classmethod
     def snapshot(cls):
@@ -108,50 +118,37 @@ class Serializer(metaclass=SerializerMeta):
     def __hydras_metadata__(self) -> SerializerMetadata:
         return type(self).__hydras_metadata__
 
-    def __init__(self, default_value, validator=None, settings=None):
+    def __init__(self, default_value, validator: Callable[[Any], bool] = None):
         """
         Creates a new formatter.
 
         :param default_value:   The default value of the formatter.
-        :param validator:       [Optional] A validation object.
-        :param settings:        [Optional] Serialization settings.
+        :param validator:       A callable
         """
         self.validator = validator
         self.default_value = default_value
-        self.settings = settings or {}
 
-        if not self.validate(default_value):
-            raise ValueError('Default value validation failed')
-
-    def resolve_settings(self, overrides=None):
-        """ Resolves the flat settings for a single action on this formatter. """
-        return HydraSettings.resolve(overrides, self.settings)
+        self.validate(default_value)
 
     @abstractmethod
-    def serialize(self, value, settings=None) -> bytes:
+    def serialize(self, value, settings: HydraSettings = None) -> bytes:
         """ When implemented in derived classes, returns the byte representation of the give value. """
         raise NotImplementedError()
 
     @abstractmethod
-    def deserialize(self, raw_data, settings=None):
+    def deserialize(self, raw_data: bytes, settings: HydraSettings = None):
         """ When implemented in derived classes, parses the raw data. """
         raise NotImplementedError()
 
-    def validate(self, value) -> bool:
+    def validate(self, value):
         """
         Validate the given value using this serializer's rules.
+        Raises if invalid
 
         :param value:   The value to validate.
-        :return:        `True` if the value is valid; `False` otherwise.
         """
-        if self.validator is not None:
-            if isinstance(self.validator, Validator):
-                return self.validator.validate(value)
-
-            if hasattr(get_as_type(self.validator), '__call__'):
-                return self.validator(value)
-
-        return True
+        if self.validator is not None and not self.validator(value):
+            raise ValidationError(value)
 
     def values_equal(self, a, b):
         """ Determines whether the given two values are equal. """
@@ -162,4 +159,8 @@ class Serializer(metaclass=SerializerMeta):
         return self.byte_size
 
     def __getitem__(self, item_count):
+        """
+        This hack enables the familiar array syntax: `type()[count]`.
+        For example, a 3-item array of type uint8_t might look like `uint8_t(0)[3]`.
+        """
         return create_array(item_count, self)

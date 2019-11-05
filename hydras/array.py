@@ -124,13 +124,12 @@ class Array(Serializer, metaclass=ArrayMeta):
             base_list += (bytes, bytearray)
         return base_list
 
-    def serialize(self, value, settings=None):
+    def serialize(self, value, settings: HydraSettings = None):
         """ Return a serialized representation of this object. """
-        settings = HydraSettings.resolve(self.settings, settings)
 
         return padto(b''.join(self.serializer.serialize(s, settings) for s in value), self.byte_size)
 
-    def deserialize(self, raw_data, settings=None):
+    def deserialize(self, raw_data, settings: HydraSettings = None):
         fmt_size = self.serializer.byte_size
 
         if self.max_size is not None and \
@@ -141,27 +140,25 @@ class Array(Serializer, metaclass=ArrayMeta):
         elif len(raw_data) % fmt_size != 0:
             raise ValueError('Raw data is not aligned to item size.')
 
-        settings = HydraSettings.resolve(self.settings, settings)
-
-        parsed = [self.serializer.deserialize(raw_data[begin:begin + self.serializer.byte_size], settings)
-                  for begin in range(0, len(raw_data), self.serializer.byte_size)]
-
-        if isinstance(self.default_value, (bytes, bytearray)):
-            parsed = type(self.default_value)(parsed)
+        parsed = type(self.default_value)(self.serializer.deserialize(raw_data[begin:begin + self.serializer.byte_size], settings)
+                  for begin in range(0, len(raw_data), self.serializer.byte_size))
 
         return parsed
 
     def values_equal(self, a, b):
         return len(a) == len(b) and all(self.serializer.values_equal(ai, bi) for ai, bi in zip(a, b))
 
-    def validate(self, value) -> bool:
+    def validate(self, value):
         if not isinstance(value, self.allowed_py_types):
-            raise TypeError('Assigned value must be a string, tuple, or a list.')
+            raise TypeError('Assigned value must be a tuple or a list.')
 
         if self.max_size is not None and len(value) > self.max_size:
             raise ValueError('Assigned array length is incorrect.')
 
-        return all(self.serializer.validate(i) for i in value) and super(Array, self).validate(value)
+        for i in value:
+            self.serializer.validate(i)
+
+        super(Array, self).validate(value)
 
     def get_actual_length(self, value):
         return len(value) * self.serializer.byte_size

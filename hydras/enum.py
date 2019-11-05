@@ -52,8 +52,7 @@ class EnumMetadata(SerializerMetadata):
         serializer = get_as_value(underlying)
         try:
             for k, v in literals.items():
-                if not serializer.validate(v):
-                    raise ValueError('<unknown error>')
+                serializer.validate(v)
         except ValueError as e:
             raise ValueError(f'Invalid value for literal {v}: {e}')
 
@@ -138,14 +137,14 @@ class Enum(Serializer, metaclass=EnumMeta):
 
         super(Enum, self).__init__(default_value, *args, **kwargs)
 
-    def serialize(self, value: Literal, settings=None):
+    def serialize(self, value: Literal, settings: HydraSettings = None):
         assert (isinstance(value, Literal) and value.enum == type(self)) or \
                (isinstance(value, int) and self.is_constant_valid(value))
 
-        return self.serializer.serialize(int(value), self.resolve_settings(settings))
+        return self.serializer.serialize(int(value), settings)
 
-    def deserialize(self, raw_data, settings=None):
-        value = self.serializer.deserialize(raw_data, self.resolve_settings(settings))
+    def deserialize(self, raw_data, settings: HydraSettings = None):
+        value = self.serializer.deserialize(raw_data, settings)
 
         if not self.is_constant_valid(value):
             raise ValueError('Parsed enum value is unknown: %d' % value)
@@ -155,9 +154,9 @@ class Enum(Serializer, metaclass=EnumMeta):
     def validate(self, value):
         """ Validate the given enum value. """
         if not self.is_constant_valid(int(value)):
-            return False
+            return ValueError('Enum literal value is not part of the enum')
 
-        return super(Enum, self).validate(int(value))
+        super(Enum, self).validate(int(value))
 
     def is_constant_valid(self, num):
         """ Determine if the given number is a valid enum literal. """

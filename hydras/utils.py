@@ -7,7 +7,7 @@ Contains various utility methods.
     - Gilad Naaman <gilad@naaman.io>
 """
 
-from typing import Any, Type, Union as TypeUnion
+from typing import Any, Type, Union
 import inspect
 import enum
 import sys
@@ -26,7 +26,7 @@ class Endianness(enum.Enum):
         return self == Endianness.LITTLE or (self == Endianness.HOST and sys.byteorder == 'little')
 
 
-def create_array(size: TypeUnion[int, slice], underlying_type):
+def create_array(size: Union[int, slice], underlying_type):
     # Importing locally in order to avoid weird import-cycle issues
     from .array import Array
     return Array[size, underlying_type]
@@ -69,7 +69,7 @@ def mask(length, offset=0):
     return ((1 << length) - 1) << offset
 
 
-def get_type_name(t: TypeUnion[Type, Any]) -> str:
+def get_type_name(t: Union[Type, Any]) -> str:
     return get_as_type(t).__name__
 
 

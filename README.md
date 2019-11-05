@@ -210,7 +210,7 @@ If an invalid value is encountered, a ValueError is raised.
 
 ```python
 class MeIsValidated(Struct):
-    member = int8_t(0, validator=RangeValidator(-15, 15))
+    member = i8(0, validator=RangeValidator(-15, 15))
 
 ...
 

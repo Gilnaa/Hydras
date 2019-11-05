@@ -21,10 +21,10 @@ if __name__ == '__main__':
 
     # You can pass new defaults to the serialize method. It will override the struct settings and HydraSettings,
     # but not the variable settings.
-    ctrl.serialize({'target_endian': Endianness.BIG})  # => b'\xAA\xBB\xCC\xDD\xEE\xFF'
+    ctrl.serialize(HydraSettings(target_endian=Endianness.BIG))  # => b'\xAA\xBB\xCC\xDD\xEE\xFF'
 
     # As said above, you cannot override the explicit settings of an individual.
-    ctrl.serialize({'target_endian': Endianness.LITTLE})  # => b'\xBB\xAA\xCC\xDD\xFF\xEE'
+    ctrl.serialize(HydraSettings(target_endian=Endianness.LITTLE))  # => b'\xBB\xAA\xCC\xDD\xFF\xEE'
 
     # Settings priorities (lowest to highest):
     #   - `HydraSettings` values.

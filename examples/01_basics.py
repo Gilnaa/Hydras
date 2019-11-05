@@ -35,6 +35,6 @@ if __name__ == '__main__':
     data = struct_object.serialize()
     print('new serialized data:', binascii.hexlify(data))       # => new serialized data: 2a000000feca80ffffff
 
-    data = struct_object.serialize({'target_endian': Endianness.BIG})
+    data = struct_object.serialize(HydraSettings(target_endian=Endianness.BIG))
     print('big-endian serialization:', binascii.hexlify(data))
     # => big-endian serialized data: 0000002acafeffffff80
