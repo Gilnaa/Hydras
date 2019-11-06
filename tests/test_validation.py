@@ -33,11 +33,11 @@ class ValidationTests(HydrasTestCase):
         # Make sure that an exception is raised when needed.
         with self.assertRaises(ValidationError):
             RangeValidated.deserialize(b'\x00')
-
-        try:
-            RangeValidated.deserialize(b'\x00')
-        except ValidationError as e:
-            print(e)
+        #
+        # try:
+        #     RangeValidated.deserialize(b'\x00')
+        # except ValidationError as e:
+        #     print(e)
 
         # Make sure no exceptions are raised when validation is off.
         HydraSettings.validate = False

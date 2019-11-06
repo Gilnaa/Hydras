@@ -79,15 +79,9 @@ class Scalar(Serializer, metaclass=ScalarMeta):
 
         super(Scalar, self).validate(value)
 
-    def serialize(self, value, settings: HydraSettings = None):
-        settings = HydraSettings.resolve(settings)
-
-        if self.endianness == Endianness.TARGET:
-            endian = settings.target_endian
-        else:
-            endian = self.endianness
-
-        return struct.pack(endian.value + self.fmt, value)
+    def serialize_into(self, storage: memoryview, offset: int, value, settings: HydraSettings = None) -> int:
+        struct.pack_into(self.get_format_string(settings), storage, offset, value)
+        return offset + self.byte_size
 
     def deserialize(self, raw_data, settings: HydraSettings = None):
         settings = HydraSettings.resolve(settings)
@@ -98,6 +92,17 @@ class Scalar(Serializer, metaclass=ScalarMeta):
             endian = self.endianness
 
         return struct.unpack(endian.value + self.fmt, raw_data)[0]
+
+    def get_format_string(self, settings: HydraSettings = None, count: int = 1):
+        if self.endianness == Endianness.TARGET:
+            settings = HydraSettings.resolve(settings)
+            endian = settings.target_endian
+        else:
+            endian = self.endianness
+
+        if count > 1:
+            return endian.value + str(count) + self.fmt
+        return endian.value + self.fmt
 
 
 # Target endian scalars

@@ -137,11 +137,11 @@ class Enum(Serializer, metaclass=EnumMeta):
 
         super(Enum, self).__init__(default_value, *args, **kwargs)
 
-    def serialize(self, value: Literal, settings: HydraSettings = None):
+    def serialize_into(self, storage: memoryview, offset: int, value: Literal, settings: HydraSettings = None) -> int:
         assert (isinstance(value, Literal) and value.enum == type(self)) or \
                (isinstance(value, int) and self.is_constant_valid(value))
 
-        return self.serializer.serialize(int(value), settings)
+        return self.serializer.serialize_into(storage, offset, int(value), settings)
 
     def deserialize(self, raw_data, settings: HydraSettings = None):
         value = self.serializer.deserialize(raw_data, settings)

@@ -121,18 +121,24 @@ class Struct(metaclass=StructMeta):
         :param settings:    [Optional] Serialization settings overrides.
         :return: A byte-string representing the struct.
         """
+        output = bytearray(len(self))
+        self.serialize_into(memoryview(output), 0, settings)
+        return bytes(output)
+
+    def serialize_into(self, storage: memoryview, offset: int, settings: HydraSettings = None):
         settings = settings or HydraSettings()
 
         if not settings.dry_run:
             self.before_serialize()
 
-        output = b''.join(formatter.serialize(getattr(self, name), settings)
-                          for name, formatter in self._hydras_members().items())
+        for name, formatter in self._hydras_members().items():
+            value = getattr(self, name)
+            offset = formatter.serialize_into(storage, offset, value, settings)
 
         if not settings.dry_run:
             self.after_serialize()
 
-        return output
+        return offset
 
     @classmethod
     def deserialize(cls, raw_data, settings=None):
@@ -293,11 +299,11 @@ class NestedStruct(Serializer, metaclass=NestedStructMeta):
     def serialize(self, value, settings=None):
         return value.serialize(settings)
 
+    def serialize_into(self, storage: memoryview, offset: int, value, settings: HydraSettings = None) -> int:
+        return value.serialize_into(storage, offset, settings)
+
     def deserialize(self, raw_data, settings=None):
         return self.struct.deserialize(raw_data, settings)
-
-    def validate(self, value):
-        return isinstance(value, get_as_type(self.struct)) and value.validate()
 
     def validate(self, value):
         value.validate()

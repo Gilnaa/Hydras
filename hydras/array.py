@@ -124,10 +124,21 @@ class Array(Serializer, metaclass=ArrayMeta):
             base_list += (bytes, bytearray)
         return base_list
 
-    def serialize(self, value, settings: HydraSettings = None):
+    def serialize_into(self, storage: memoryview, offset: int, value, settings: HydraSettings = None) -> int:
         """ Return a serialized representation of this object. """
 
-        return padto(b''.join(self.serializer.serialize(s, settings) for s in value), self.byte_size)
+        if isinstance(value, (bytes, bytearray)):
+            storage[offset:offset+len(value)] = value
+            offset += self.byte_size
+        elif isinstance(self.serializer, Scalar):
+            fmt = self.serializer.get_format_string(settings, len(value))
+            struct.pack_into(fmt, storage, offset, *value)
+            offset += self.byte_size
+        else:
+            for s in value:
+                offset = self.serializer.serialize_into(storage, offset, s, settings)
+        # TODO: pad
+        return offset
 
     def deserialize(self, raw_data, settings: HydraSettings = None):
         fmt_size = self.serializer.byte_size

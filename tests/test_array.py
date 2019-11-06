@@ -68,3 +68,9 @@ class VectorTests(HydrasTestCase):
         self.assertEqual(u16[2]([1, 1]).default_value, [1, 1])
         with self.assertRaises(ValueError):
             u16[2]([1, 1, 1])
+
+    def test_shorter_value(self):
+        a = HasArray()
+        a.array = [0, 0]
+        self.assertEqual(a.serialize(), b'\00\x00\x00\x00')
+

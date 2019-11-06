@@ -130,9 +130,18 @@ class Serializer(metaclass=SerializerMeta):
 
         self.validate(default_value)
 
-    @abstractmethod
     def serialize(self, value, settings: HydraSettings = None) -> bytes:
         """ When implemented in derived classes, returns the byte representation of the give value. """
+        storage = bytearray(self.get_actual_length(value))
+        self.serialize_into(memoryview(storage), 0, value, settings)
+        return bytes(storage)
+
+    @abstractmethod
+    def serialize_into(self,
+                       storage: memoryview,
+                       offset: int,
+                       value: Any,
+                       settings: HydraSettings = None) -> int:
         raise NotImplementedError()
 
     @abstractmethod
