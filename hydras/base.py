@@ -130,6 +130,12 @@ class Serializer(metaclass=SerializerMeta):
 
         self.validate(default_value)
 
+    def get_initial_value(self):
+        return self.default_value
+
+    def get_initial_values(self, count):
+        return [self.get_initial_value() for _ in range(count)]
+
     def serialize(self, value, settings: HydraSettings = None) -> bytes:
         """ When implemented in derived classes, returns the byte representation of the give value. """
         storage = bytearray(self.get_actual_length(value))

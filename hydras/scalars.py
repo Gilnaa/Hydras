@@ -105,8 +105,15 @@ class Scalar(Serializer, metaclass=ScalarMeta):
         return endian.value + self.fmt
 
 
+class ByteType(Scalar, fmt='B'):
+    def get_initial_values(self, count):
+        initial_value = self.get_initial_value()
+        if initial_value == 0:
+            return bytearray(count)
+        return bytearray((initial_value, )) * count
+
 # Target endian scalars
-class u8(Scalar, fmt='B', endianness=Endianness.TARGET): pass
+class u8(ByteType, fmt='B', endianness=Endianness.TARGET): pass
 class i8(Scalar, fmt='b', endianness=Endianness.TARGET): pass
 class u16(Scalar, fmt='H', endianness=Endianness.TARGET): pass
 class i16(Scalar, fmt='h', endianness=Endianness.TARGET): pass
@@ -119,7 +126,7 @@ class f64(Scalar, fmt='d', endianness=Endianness.TARGET): pass
 
 
 # Big-endian scalars
-class u8_be(Scalar, fmt='B', endianness=Endianness.BIG): pass
+class u8_be(ByteType, fmt='B', endianness=Endianness.BIG): pass
 class i8_be(Scalar, fmt='b', endianness=Endianness.BIG): pass
 class u16_be(Scalar, fmt='H', endianness=Endianness.BIG): pass
 class i16_be(Scalar, fmt='h', endianness=Endianness.BIG): pass
@@ -132,7 +139,7 @@ class f64_be(Scalar, fmt='d', endianness=Endianness.BIG): pass
 
 
 # Little-endian scalars
-class u8_le(Scalar, fmt='B', endianness=Endianness.LITTLE): pass
+class u8_le(ByteType, fmt='B', endianness=Endianness.LITTLE): pass
 class i8_le(Scalar, fmt='b', endianness=Endianness.LITTLE): pass
 class u16_le(Scalar, fmt='H', endianness=Endianness.LITTLE): pass
 class i16_le(Scalar, fmt='h', endianness=Endianness.LITTLE): pass

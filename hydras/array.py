@@ -97,7 +97,7 @@ class Array(Serializer, metaclass=ArrayMeta):
         :param kwargs:          A paramater dict to be passed to the base class.
         """
         if default_value is None:
-            default_value = [copy.deepcopy(self.serializer.default_value) for _ in range(self.min_size)]
+            default_value = self.serializer.get_initial_values(self.min_size)
         elif isinstance(default_value, (bytes, bytearray)) and not isinstance(self.serializer, BYTE_TYPES):
             raise TypeError('Using `bytes` or `bytearray` for an array value is only valid when the item type is `u8`')
         elif not isinstance(default_value, self.allowed_py_types):
@@ -151,8 +151,11 @@ class Array(Serializer, metaclass=ArrayMeta):
         elif len(raw_data) % fmt_size != 0:
             raise ValueError('Raw data is not aligned to item size.')
 
-        parsed = type(self.default_value)(self.serializer.deserialize(raw_data[begin:begin + self.serializer.byte_size], settings)
-                  for begin in range(0, len(raw_data), self.serializer.byte_size))
+        if isinstance(self.default_value, (bytes, bytearray)):
+            parsed = type(self.default_value)(raw_data)
+        else:
+            parsed = type(self.default_value)(self.serializer.deserialize(raw_data[begin:begin + self.serializer.byte_size], settings)
+                                              for begin in range(0, len(raw_data), self.serializer.byte_size))
 
         return parsed
 
@@ -166,8 +169,9 @@ class Array(Serializer, metaclass=ArrayMeta):
         if self.max_size is not None and len(value) > self.max_size:
             raise ValueError('Assigned array length is incorrect.')
 
-        for i in value:
-            self.serializer.validate(i)
+        if not isinstance(value, (bytes, bytearray)):
+            for i in value:
+                self.serializer.validate(i)
 
         super(Array, self).validate(value)
 

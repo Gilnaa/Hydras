@@ -15,7 +15,8 @@ class TestVLA(HydrasTestCase):
 
     def test_default_value(self):
         # Default value should be the minimal length
-        self.assertEqual(u8[5:7]().default_value, [0] * 5)
+        self.assertEqual(u8[5:7]().get_initial_value(), bytearray(5))
+        self.assertEqual(u16[5:7]().get_initial_value(), [0] * 5)
 
     def test_vla_sizes(self):
         class Florp(Struct):

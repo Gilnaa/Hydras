@@ -4,6 +4,13 @@ from .utils import *
 __all__ = ('Struct', )
 
 
+class EmptyFieldValueType:
+    pass
+
+
+EMPTY_FIELD = EmptyFieldValueType()
+
+
 class StructMetadata(object):
     name = None
     size = 0
@@ -99,8 +106,8 @@ class Struct(metaclass=StructMeta):
             if var_name in kwargs:
                 setattr(self, var_name, kwargs[var_name])
             else:
-                # Call base setattr to avoid validation of default values
-                super().__setattr__(var_name, copy.deepcopy(var_formatter.default_value))
+                # Calling super's __setattr__ in order to avoid validation on empty value
+                super().__setattr__(var_name, EMPTY_FIELD)
 
     @classmethod
     def _hydras_metadata(cls) -> StructMetadata:
@@ -147,6 +154,10 @@ class Struct(metaclass=StructMeta):
 
         # Create a new struct object and set its properties.
         class_object = cls()
+
+        assert isinstance(raw_data, (bytes, bytearray, memoryview))
+        if not isinstance(raw_data, memoryview):
+            raw_data = memoryview(raw_data)
 
         if len(raw_data) < len(class_object):
             raise ValueError('The supplied raw data is too short for a struct of type "%s"' % get_type_name(cls))
@@ -232,6 +243,13 @@ class Struct(metaclass=StructMeta):
 
         super(Struct, self).__setattr__(key, value)
 
+    def __getattribute__(self, key):
+        value = super().__getattribute__(key)
+        if isinstance(value, EmptyFieldValueType):
+            value = self._hydras_members()[key].get_initial_value()
+            setattr(self, key, value)
+        return value
+
     def __iter__(self):
         """ Support conversion to dict """
         for key in self._hydras_members():
@@ -298,6 +316,9 @@ class NestedStruct(Serializer, metaclass=NestedStructMeta):
 
     def serialize(self, value, settings=None):
         return value.serialize(settings)
+
+    def get_initial_value(self):
+        return copy.deepcopy(self.struct)
 
     def serialize_into(self, storage: memoryview, offset: int, value, settings: HydraSettings = None) -> int:
         return value.serialize_into(storage, offset, settings)
