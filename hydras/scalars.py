@@ -83,6 +83,16 @@ class Scalar(Serializer, metaclass=ScalarMeta):
         struct.pack_into(self.get_format_string(settings), storage, offset, value)
         return offset + self.byte_size
 
+    def serialize_many_into(self,
+                            storage: memoryview,
+                            offset: int,
+                            value: List[Any],
+                            min_values_count: int,
+                            settings: HydraSettings) -> int:
+        fmt = self.get_format_string(settings, len(value))
+        struct.pack_into(fmt, storage, offset, *value)
+        return offset + self.byte_size * max(len(value), min_values_count)
+
     def deserialize(self, raw_data, settings: HydraSettings = None):
         settings = HydraSettings.resolve(settings)
 
@@ -111,6 +121,17 @@ class ByteType(Scalar, fmt='B'):
         if initial_value == 0:
             return bytearray(count)
         return bytearray((initial_value, )) * count
+
+    def serialize_many_into(self,
+                            storage: memoryview,
+                            offset: int,
+                            value: List[Any],
+                            min_values_count: int,
+                            settings: HydraSettings) -> int:
+        if not isinstance(value, (bytes, bytearray)):
+            return super().serialize_many_into(storage, offset, value, min_values_count, settings)
+        storage[offset:offset + len(value)] = value
+        return offset + max(len(value), min_values_count)
 
 # Target endian scalars
 class u8(ByteType, fmt='B', endianness=Endianness.TARGET): pass

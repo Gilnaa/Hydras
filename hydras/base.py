@@ -9,7 +9,7 @@ Contains the core classes of the framework.
 
 import copy
 import collections
-from typing import Any, Dict, Union, Iterator, Callable
+from typing import Any, List, Dict, Union, Iterator, Callable
 from abc import ABCMeta, abstractmethod
 from .validators import *
 
@@ -149,6 +149,20 @@ class Serializer(metaclass=SerializerMeta):
                        value: Any,
                        settings: HydraSettings = None) -> int:
         raise NotImplementedError()
+
+    def serialize_many_into(self,
+                            storage: memoryview,
+                            offset: int,
+                            value: List[Any],
+                            min_values_count: int,
+                            settings: HydraSettings) -> int:
+        for s in value:
+            offset = self.serialize_into(storage, offset, s, settings)
+        if len(value) < min_values_count:
+            s = self.get_initial_value()
+            for _ in range(min_values_count - len(value)):
+                offset = self.serialize_into(storage, offset, s, settings)
+        return offset
 
     @abstractmethod
     def deserialize(self, raw_data: bytes, settings: HydraSettings = None):

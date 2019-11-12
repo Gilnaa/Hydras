@@ -127,18 +127,8 @@ class Array(Serializer, metaclass=ArrayMeta):
     def serialize_into(self, storage: memoryview, offset: int, value, settings: HydraSettings = None) -> int:
         """ Return a serialized representation of this object. """
 
-        if isinstance(value, (bytes, bytearray)):
-            storage[offset:offset+len(value)] = value
-            offset += self.byte_size
-        elif isinstance(self.serializer, Scalar):
-            fmt = self.serializer.get_format_string(settings, len(value))
-            struct.pack_into(fmt, storage, offset, *value)
-            offset += self.byte_size
-        else:
-            for s in value:
-                offset = self.serializer.serialize_into(storage, offset, s, settings)
-        # TODO: pad
-        return offset
+        # TODO: When using a scalar, this function always pads with zeroes, instead of with the default value
+        return self.serializer.serialize_many_into(storage, offset, value, self.min_size, settings)
 
     def deserialize(self, raw_data, settings: HydraSettings = None):
         fmt_size = self.serializer.byte_size
@@ -151,6 +141,7 @@ class Array(Serializer, metaclass=ArrayMeta):
         elif len(raw_data) % fmt_size != 0:
             raise ValueError('Raw data is not aligned to item size.')
 
+        # Skip deserialization when the output is bytes.
         if isinstance(self.default_value, (bytes, bytearray)):
             parsed = type(self.default_value)(raw_data)
         else:

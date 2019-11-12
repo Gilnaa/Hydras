@@ -396,20 +396,23 @@ class Typedef(Type):
         return [self.alias]
 
     def get_hydras_type(self):
+        if self._is_primitive_scalar():
+            # First character of name is either an `i` or a `u`.
+            return f'{self.name[0]}{self.byte_size * 8}'
         return self.name
 
     def __repr__(self):
         return self.name
 
     def __eq__(self, other):
-        if not self.needs_to_generate_hydra():
+        if self._is_primitive_scalar():
             return isinstance(other, Typedef) and other.name == self.name
 
         return isinstance(other, Typedef) and other.name == self.name and other.alias == self.alias
 
     def needs_to_generate_hydra(self) -> bool:
         # Skip generation of common Hydras typedefs
-        return not bool(re.match(r'u?int(8|16|32|64)_t', self.name))
+        return not self._is_primitive_scalar()
 
     def generate_hydras_definition(self, fp: TextIO):
         if not self.needs_to_generate_hydra():
@@ -418,6 +421,9 @@ class Typedef(Type):
         if self.alias.is_pointer():
             fp.write(f'# <POINTER> ({repr(self.alias)})\n')
         fp.write(f'{self.name} = {self.alias.get_hydras_type()}\n')
+
+    def _is_primitive_scalar(self):
+        return bool(re.match(r'u?int(8|16|32|64)_t', self.name))
 
 
 class Pointer(Type):
