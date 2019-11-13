@@ -146,6 +146,19 @@ class f32(Scalar, fmt='f', endianness=Endianness.TARGET): pass
 class f64(Scalar, fmt='d', endianness=Endianness.TARGET): pass
 
 
+# Rename scalars to match stdint.h style typedefs
+uint8_t = u8
+uint16_t = u16
+uint32_t = u32
+uint64_t = u64
+int8_t = i8
+int16_t = i16
+int32_t = i32
+int64_t = i64
+float32_t = f32
+float64_t = f64
+
+
 # Big-endian scalars
 class u8_be(ByteType, fmt='B', endianness=Endianness.BIG): pass
 class i8_be(Scalar, fmt='b', endianness=Endianness.BIG): pass

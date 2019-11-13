@@ -205,7 +205,7 @@ class Struct(Type):
         for offset, member_type, member_name in self.members:
             # Generate entries for compiler introduced padding
             if last_ending_offset < offset:
-                fp.write(f'    _padding_{padding_counter} = Pad({offset - last_ending_offset})\n')
+                fp.write(f'    _padding_{padding_counter} = uint8_t[{offset - last_ending_offset}]\n')
                 padding_counter += 1
             last_ending_offset = offset + member_type.byte_size
 
@@ -217,7 +217,7 @@ class Struct(Type):
 
         # The compiler can also generate postfix padding.
         if last_ending_offset != self.byte_size:
-            fp.write(f'    _padding_{padding_counter} = Pad({self.byte_size - last_ending_offset})\n')
+            fp.write(f'    _padding_{padding_counter} = uint8_t[{self.byte_size - last_ending_offset}]\n')
 
 
 class EnumType(Type):
@@ -254,7 +254,7 @@ class EnumType(Type):
         return self.name
 
     def get_hydras_type(self):
-        return f'{self.name}(type_formatter={self.item_type.get_hydras_type()})'
+        return f'{self.name}'
 
     def __eq__(self, other):
         return isinstance(other, EnumType) and \
@@ -267,7 +267,7 @@ class EnumType(Type):
 
     def generate_hydras_definition(self, fp: TextIO):
         # Adding 2 empty lines in order to comply w/ PEP8
-        fp.write(f'class {self.name}(EnumClass):\n')
+        fp.write(f'class {self.name}(Enum):\n')
 
         for name, value in self.literals.items():
             # Output the member itself
@@ -396,23 +396,20 @@ class Typedef(Type):
         return [self.alias]
 
     def get_hydras_type(self):
-        if self._is_primitive_scalar():
-            # First character of name is either an `i` or a `u`.
-            return f'{self.name[0]}{self.byte_size * 8}'
         return self.name
 
     def __repr__(self):
         return self.name
 
     def __eq__(self, other):
-        if self._is_primitive_scalar():
+        if not self.needs_to_generate_hydra():
             return isinstance(other, Typedef) and other.name == self.name
 
         return isinstance(other, Typedef) and other.name == self.name and other.alias == self.alias
 
     def needs_to_generate_hydra(self) -> bool:
         # Skip generation of common Hydras typedefs
-        return not self._is_primitive_scalar()
+        return not bool(re.match(r'u?int(8|16|32|64)_t', self.name))
 
     def generate_hydras_definition(self, fp: TextIO):
         if not self.needs_to_generate_hydra():
@@ -421,9 +418,6 @@ class Typedef(Type):
         if self.alias.is_pointer():
             fp.write(f'# <POINTER> ({repr(self.alias)})\n')
         fp.write(f'{self.name} = {self.alias.get_hydras_type()}\n')
-
-    def _is_primitive_scalar(self):
-        return bool(re.match(r'u?int(8|16|32|64)_t', self.name))
 
 
 class Pointer(Type):

@@ -36,6 +36,9 @@ class Literal:
     def __repr__(self):
         return f'{get_type_name(self.enum)}.{self.literal_name}'
 
+    def __eq__(self, other):
+        return int(self) == int(other)
+
 
 class EnumMetadata(SerializerMetadata):
     __slots__ = ('flags', 'serializer', 'literals')

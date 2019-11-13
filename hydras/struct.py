@@ -1,7 +1,7 @@
 from .base import *
 from .utils import *
 
-__all__ = ('Struct', )
+__all__ = ('Struct', 'NestedStruct')
 
 
 class EmptyFieldValueType:
@@ -272,6 +272,9 @@ class Struct(metaclass=StructMeta):
         For example, a 3-item array of type uint16_t might look like `uint16_t(default_value=5)[3]`.
         """
         return create_array(item_count, NestedStruct[self]())
+
+    def __repr__(self):
+        return repr(dict(self))
 
 
 class NestedStructMetadata(SerializerMetadata):
