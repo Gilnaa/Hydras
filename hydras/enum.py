@@ -106,6 +106,9 @@ class EnumMeta(SerializerMeta):
             return Literal(self, name, self.literals[name])
         return super().__getattr__(name)
 
+    def __repr__(self):
+        return get_type_name(self)
+
 
 class Enum(Serializer, metaclass=EnumMeta):
     @property
@@ -177,3 +180,9 @@ class Enum(Serializer, metaclass=EnumMeta):
 
     def values_equal(self, a, b):
         return int(a) == int(b)
+
+    def __repr__(self):
+        value = self.get_initial_value()
+        if value.literal_name == next(iter(self.literals.keys())):
+            value = ''
+        return f'{get_type_name(self)}({value})'

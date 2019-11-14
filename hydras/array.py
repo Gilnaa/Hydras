@@ -70,7 +70,7 @@ class ArrayMeta(SerializerMeta):
             size = f'{cls.__hydras_metadata__.array_size_min}:{cls.__hydras_metadata__.array_size_max}'
         else:
             size = f'{cls.__hydras_metadata__.array_size_min}'
-        return f'<array <{cls.__hydras_metadata__.serializer}> [{size}]>'
+        return f'{cls.__hydras_metadata__.serializer}[{size}]'
 
 
 class Array(Serializer, metaclass=ArrayMeta):
@@ -168,3 +168,10 @@ class Array(Serializer, metaclass=ArrayMeta):
 
     def get_actual_length(self, value):
         return len(value) * self.serializer.byte_size
+
+    def __repr__(self) -> str:
+        if self.is_constant_size:
+            size = f'{self.min_size}:{self.max_size}'
+        else:
+            size = f'{self.min_size}'
+        return f'{self.serializer}[{size}]'

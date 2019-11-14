@@ -88,11 +88,14 @@ class StructMeta(type):
     def __getitem__(cls, item_count):
         return create_array(item_count, NestedStruct[cls]())
 
+    def __repr__(self):
+        return f'{get_type_name(self)}'
+
 
 class Struct(metaclass=StructMeta):
     """ A base class for the framework's structs. """
 
-    def __init__(self, **kwargs):
+    def __init__(self, initial_values: dict = None):
         """
         Creates a struct.
 
@@ -100,11 +103,13 @@ class Struct(metaclass=StructMeta):
         """
         super(Struct, self).__init__()
 
+        initial_values = initial_values or {}
+
         # Initialize a copy of the data properties.
         for var_name, var_formatter in self._hydras_members().items():
             # Accept a non-default value through the keyword arguments.
-            if var_name in kwargs:
-                setattr(self, var_name, kwargs[var_name])
+            if var_name in initial_values:
+                setattr(self, var_name, initial_values[var_name])
             else:
                 # Calling super's __setattr__ in order to avoid validation on empty value
                 super().__setattr__(var_name, EMPTY_FIELD)
@@ -274,7 +279,9 @@ class Struct(metaclass=StructMeta):
         return create_array(item_count, NestedStruct[self]())
 
     def __repr__(self):
-        return repr(dict(self))
+        lines = (f"'{name}': {repr(getattr(self, name))}" for name in self._hydras_members())
+        params = ', '.join(lines)
+        return f'{get_type_name(self)}({{{params}}})'
 
 
 class NestedStructMetadata(SerializerMetadata):
@@ -296,6 +303,11 @@ class NestedStructMeta(SerializerMeta):
         return type(get_type_name(cls), (cls,), {
             SerializerMeta.METAATTR: NestedStructMetadata(get_as_value(struct_type_or_object))
         })
+
+    def __repr__(self):
+        # This impl is not accurate and will result in invalid representations,
+        # but this will most likely be used for debugging purposes.
+        return f'NestedStruct[{get_type_name(self.__hydras_metadata__.struct)}]'
 
 
 class NestedStruct(Serializer, metaclass=NestedStructMeta):
@@ -336,4 +348,6 @@ class NestedStruct(Serializer, metaclass=NestedStructMeta):
         return len(self.default_value)
 
     def __repr__(self):
-        return '<{} ({})>'.format(type(self).__name__, self.struct)
+        # This impl is not accurate and will result in invalid representations,
+        # but this will most likely be used for debugging purposes.
+        return f'NestedStruct[{get_type_name(self.__hydras_metadata__.struct)}]()'

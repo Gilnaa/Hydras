@@ -40,6 +40,9 @@ class ScalarMeta(SerializerMeta):
             classdict[SerializerMeta.METAATTR] = ScalarMetadata(fmt=fmt, endianness=endianness)
         return super(ScalarMeta, mcs).__new__(mcs, name, bases, classdict)
 
+    def __repr__(self):
+        return get_type_name(self)
+
 
 class Scalar(Serializer, metaclass=ScalarMeta):
     """ Provides a handy base class for primitive-value formatters. """
@@ -113,6 +116,10 @@ class Scalar(Serializer, metaclass=ScalarMeta):
         if count > 1:
             return endian.value + str(count) + self.fmt
         return endian.value + self.fmt
+
+    def __repr__(self):
+        value = self.get_initial_value() or ''
+        return f'{get_type_name(self)}({value})'
 
 
 class ByteType(Scalar, fmt='B'):

@@ -51,4 +51,5 @@ class TestScalarFormatters(HydrasTestCase):
             float = f32
             double = f64
 
-        self.assertEqual(bytes(Foo(float=1, double=1)), b'\x00\x00\x80\x3F\x00\x00\x00\x00\x00\x00\xF0\x3F')
+        self.assertEqual(bytes(Foo(dict(float=1,
+                                        double=1))), b'\x00\x00\x80\x3F\x00\x00\x00\x00\x00\x00\xF0\x3F')
