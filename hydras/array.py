@@ -66,7 +66,7 @@ class ArrayMeta(SerializerMeta):
         })
 
     def __repr__(cls) -> str:
-        if cls.is_constant_size():
+        if cls.is_constant_size:
             size = f'{cls.__hydras_metadata__.array_size_min}:{cls.__hydras_metadata__.array_size_max}'
         else:
             size = f'{cls.__hydras_metadata__.array_size_min}'
