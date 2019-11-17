@@ -23,6 +23,9 @@ STATE_IN_PROCESS = 1
 STATE_FINALIZED = 2
 flatten_arrays = False
 
+autogen_comment = [ '# This struct has been automatically generated, see top of file\n',
+                    '# noinspection PyPep8Naming\n' ]
+
 
 def eprint(*args, **kwargs):
     print(*args, **kwargs, file=sys.stderr)
@@ -200,6 +203,7 @@ class Struct(Type):
         last_ending_offset = 0
 
         # Adding 2 empty lines in order to comply w/ PEP8
+        fp.writelines(autogen_comment)
         fp.write(f'class {self.name}(Struct):\n')
 
         for offset, member_type, member_name in self.members:
@@ -213,7 +217,8 @@ class Struct(Type):
                 fp.write(f'    # <POINTER> ({repr(member_type)})\n')
 
             # Output the member itself
-            fp.write(f'    {member_name} = {member_type.get_hydras_type()}\n')
+            type_hint = f': List[{member_type.item_type.get_hydras_type()}]' if type(member_type) == Array else ''
+            fp.write(f'    {member_name}{type_hint} = {member_type.get_hydras_type()}\n')
 
         # The compiler can also generate postfix padding.
         if last_ending_offset != self.byte_size:
@@ -609,7 +614,11 @@ def parse_dwarf_info(elf, whitelist_re, skip_duplicated_symbols):
 
 
 def generate_hydra_file(structs, fp: TextIO):
-    fp.write('from hydras import *\n')
+    fp.write('# File was automatically generated using the dwarf2hydra.py tool.\n')
+    fp.writelines([
+            'from hydras import *\n',
+            'from typing import List\n'
+        ])
 
     last_generated_type = None
     for struct in structs:
