@@ -95,6 +95,14 @@ class StructTests(HydrasTestCase):
             class C(A, B):
                 pass
 
+    def test_pickles(self):
+        import pickle
+        o = pickle.loads(pickle.dumps(SimpleStruct()))
+        self.assertEqual(o, SimpleStruct())
+
+        o = pickle.loads(pickle.dumps(ComplicatedStruct()))
+        self.assertEqual(o, ComplicatedStruct())
+
 
 if __name__ == '__main__':
     unittest.main()
