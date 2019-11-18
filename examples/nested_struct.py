@@ -4,11 +4,11 @@ from hydras import *
 
 
 class Header(Struct):
-    Opcode = uint16_t
-    SourceID = uint8_t
-    DestinationID = uint8_t
-    PayloadLength = uint64_t
-    CRC = uint32_t
+    Opcode = u16
+    SourceID = u8
+    DestinationID = u8
+    PayloadLength = u64
+    CRC = u32
 
 
 class SyncMessage(Struct):
@@ -21,7 +21,7 @@ class AckMessage(Struct):
 
 class DataFragmentMessage(Struct):
     Header = Header(Opcode=3, PayloadLength=1024)
-    Payload = Array(1024)
+    Payload = u8[1024]
 
 
 if __name__ == '__main__':

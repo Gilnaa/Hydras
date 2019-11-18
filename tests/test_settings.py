@@ -1,52 +1,48 @@
 #!/usr/bin/env python
 
-import unittest
-from hydras import *
+from .utils import *
 
 
-class BigStruct(Struct):
-    settings = {'endian': BigEndian}
-    a = uint16_t(0xAABB)
+# This struct's endianness is of the "target"
+class TargetStruct(Struct):
+    a = u16(0xAABB)
 
 
-class NativeStruct(Struct):
-    a = uint16_t(0xAABB)
-
-
+# while this struct's endianness is always big.
 class SpecificStruct(Struct):
-    a = uint16_t(0xAABB, endian=BigEndian)
+    a = u16_be(0xAABB)
 
-class SettingsTests(unittest.TestCase):
-    def setUp(self):
-        HydraSettings.push()
-        HydraSettings.endian = LittleEndian
 
-    def tearDown(self):
-        HydraSettings.pop()
-
+class SettingsTests(HydrasTestCase):
     def test_priority(self):
-        # 1. Global
-        self.assertEqual(NativeStruct().serialize(), b'\xBB\xAA')
-        HydraSettings.endian = BigEndian
-        self.assertEqual(NativeStruct().serialize(), b'\xAA\xBB')
+        s = SpecificStruct()
+        h = TargetStruct()
 
-        # 2. Struct-settings
-        self.assertEqual(BigStruct().serialize(), b'\xAA\xBB')
-        HydraSettings.endian = LittleEndian
-        self.assertEqual(BigStruct().serialize(), b'\xAA\xBB')
+        # 1. Global - Make sure that the serialized struct reacts to the global settings.
+        HydraSettings.target_endian = Endianness.LITTLE
+        self.assertEqual(h.serialize(), b'\xBB\xAA')
+        HydraSettings.target_endian = Endianness.BIG
+        self.assertEqual(h.serialize(), b'\xAA\xBB')
 
-        # 3. Serialization-settings
-        self.assertEqual(BigStruct().serialize({'endian': LittleEndian}), b'\xBB\xAA')
+        # 2. Serialization-settings - Make sure that the struct uses the overriden endianness
+        HydraSettings.target_endian = Endianness.LITTLE
+        self.assertEqual(h.serialize(HydraSettings(target_endian=Endianness.BIG)), b'\xAA\xBB')
+        self.assertEqual(h, TargetStruct.deserialize(b'\xAA\xBB', HydraSettings(target_endian=Endianness.BIG)))
 
-        # 4. Field-settings
-        HydraSettings.endian = LittleEndian
-        self.assertEqual(SpecificStruct().serialize(), b'\xAA\xBB')
+        HydraSettings.target_endian = Endianness.BIG
+        self.assertEqual(h, TargetStruct.deserialize(b'\xBB\xAA', HydraSettings(target_endian=Endianness.LITTLE)))
 
-        HydraSettings.endian = BigEndian
-        self.assertEqual(SpecificStruct().serialize(), b'\xAA\xBB')
+        # 3. Field-settings - Make sure that the BE fields ignore any settings
+        HydraSettings.target_endian = Endianness.LITTLE
+        self.assertEqual(s.serialize(), b'\xAA\xBB')
 
-        self.assertEqual(SpecificStruct().serialize({'endian': BigEndian}), b'\xAA\xBB')
-        self.assertEqual(SpecificStruct().serialize({'endian': LittleEndian}), b'\xAA\xBB')
+        HydraSettings.target_endian = Endianness.BIG
+        self.assertEqual(s.serialize(), b'\xAA\xBB')
+
+        self.assertEqual(s.serialize(HydraSettings(target_endian=Endianness.BIG)), b'\xAA\xBB')
+        self.assertEqual(s.serialize(HydraSettings(target_endian=Endianness.LITTLE)), b'\xAA\xBB')
+        self.assertEqual(SpecificStruct.deserialize(b'\xAA\xBB', HydraSettings(target_endian=Endianness.BIG)), s)
+        self.assertEqual(SpecificStruct.deserialize(b'\xAA\xBB', HydraSettings(target_endian=Endianness.LITTLE)), s)
 
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@ A review of the Array type.
 
 :date: 11/06/2016
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 
 from hydras import *
@@ -14,14 +14,14 @@ import binascii
 
 
 class SmallStruct(Struct):
-    a = uint8_t(0xAA)
-    b = uint8_t(0xFF)
+    a = u8(0xAA)
+    b = u8(0xFF)
 
 
 class HasArraysInIt(Struct):
-    byte_array = Array(8)
-    dword_array = Array(2, uint32_t)
-    object_array = Array(4, SmallStruct)
+    byte_array = u8[8]
+    dword_array = u32[2]
+    object_array = SmallStruct[4]
 
 
 if __name__ == '__main__':

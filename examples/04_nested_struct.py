@@ -6,7 +6,7 @@ A review of the Array type.
 
 :date: 11/06/2016
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 
 from hydras import *
@@ -14,13 +14,13 @@ import binascii
 
 
 class SomeHeader(Struct):
-    opcode = uint32_t()
-    timestamp = uint64_t()
+    opcode = u32
+    timestamp = u64
 
 
 class SomePacket(Struct):
-    header = NestedStruct(SomeHeader)
-    data = Array(12)
+    header = SomeHeader
+    data = u8[12]
 
 
 if __name__ == '__main__':

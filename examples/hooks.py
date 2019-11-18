@@ -5,10 +5,11 @@ This example demonstrates how to implement several of `Struct`'s hooks.
 :file: hooks.py
 :date: 08/09/2015
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
-
+import binascii
 from hydras import *
+
 
 class DynamicStruct(Struct):
     """ 
@@ -20,8 +21,8 @@ class DynamicStruct(Struct):
     """
 
     # Data members.
-    index = uint32_t()
-    even_message = uint8_t()
+    index = u32
+    even_message = u8
 
     # Hooks.
     def after_serialize(self):
@@ -31,7 +32,7 @@ class DynamicStruct(Struct):
 
     def validate(self):
         """ Ensures the validity of the DynamicStruct's data members. """
-        if self.even_message not in xrange(2):
+        if self.even_message not in range(2):
             return False
 
         if self.index < 0:
@@ -43,16 +44,10 @@ class DynamicStruct(Struct):
         return True
 
 
-def print_raw_data(raw_data):
-    for byte in raw_data:
-        print('%02x' % ord(byte),)
-    print()
-
-
 if __name__ == '__main__':
     s = DynamicStruct()
-    for i in xrange(5):
-        print_raw_data(s.serialize())
+    for i in range(5):
+        print(binascii.hexlify(s.serialize()))
     # Output:
     #   00 00 00 00 00
     #   01 00 00 00 01

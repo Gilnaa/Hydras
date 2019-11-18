@@ -1,13 +1,9 @@
-.PHONY: test test_python2 test_python3
+.PHONY: test pytest examples
 
-test: test_python2 test_python3
+test: pytest examples
 
-test_python2:
-	@echo ">> Running tests in Python 2"
-	@python2 -m pytest
-	@echo
-
-test_python3:
-	@echo ">>Runnning tests in Python 3"
+pytest:
 	@python3 -m pytest
-	@echo
+
+examples:
+	@for exa in $$(find examples -type f); do echo "$$exa"; PYTHONPATH=. python3 $$exa || exit 1; done

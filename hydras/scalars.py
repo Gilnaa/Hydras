@@ -5,18 +5,65 @@ Contains various primitive type formatters.
 
 :date: 27/08/2015
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 
 from .base import *
 import struct
 
 
-class Scalar(TypeFormatter):
+class ScalarMetadata(SerializerMetadata):
+    __slots__ = ('endianness', 'fmt', 'validator', 'py_types')
+    _FORMATTERS_INFO = {
+        'B': (1, (int, ), RangeValidator(0, 255)),
+        'b': (1, (int, ), RangeValidator(-128, 127)),
+        'H': (2, (int, ), RangeValidator(0, 65535)),
+        'h': (2, (int, ), RangeValidator(-32768, 32767)),
+        'I': (4, (int, ), RangeValidator(0, 4294967295)),
+        'i': (4, (int, ), RangeValidator(-2147483648, 2147483647)),
+        'Q': (8, (int, ), RangeValidator(0, 18446744073709551615)),
+        'q': (8, (int, ), RangeValidator(-9223372036854775808, 9223372036854775807)),
+        'f': (4, (int, float), TrueValidator()),
+        'd': (8, (int, float), TrueValidator()),
+    }
 
+    def __init__(self, *, fmt: str, endianness: Endianness):
+        size, self.py_types, self.validator = ScalarMetadata._FORMATTERS_INFO[fmt]
+        self.endianness = endianness
+        self.fmt = fmt
+        super(ScalarMetadata, self).__init__(size)
+
+
+class ScalarMeta(SerializerMeta):
+    def __new__(mcs, name, bases, classdict, fmt: str = None, endianness: Endianness = Endianness.TARGET):
+        if hasattr(sys.modules[__name__], 'Scalar'):
+            classdict[SerializerMeta.METAATTR] = ScalarMetadata(fmt=fmt, endianness=endianness)
+        return super(ScalarMeta, mcs).__new__(mcs, name, bases, classdict)
+
+    def __repr__(self):
+        return get_type_name(self)
+
+
+class Scalar(Serializer, metaclass=ScalarMeta):
     """ Provides a handy base class for primitive-value formatters. """
 
-    def __init__(self, format_string, default_value=0, endian=None, *args, **kwargs):
+    @property
+    def endianness(self) -> Endianness:
+        return self.__hydras_metadata__.endianness
+
+    @property
+    def fmt(self) -> str:
+        return self.__hydras_metadata__.fmt
+
+    @property
+    def py_types(self):
+        return self.__hydras_metadata__.py_types
+
+    @property
+    def primitive_validator(self):
+        return self.__hydras_metadata__.validator
+
+    def __init__(self, default_value=0, *args, **kwargs):
         """
         Initialize the scalar object.
 
@@ -24,116 +71,122 @@ class Scalar(TypeFormatter):
         :param default_value:   The default value of this formatter.
         :param endian:          The endian of this formatter.
         """
-        settings = {}
-        self.format_string = format_string
-        if endian is not None:
-            settings['endian'] = endian
+        super(Scalar, self).__init__(default_value, *args, **kwargs)
+        self._length = len(self.serialize(0))
 
-        self.validate_assignment(default_value)
+    def validate(self, value):
+        if not isinstance(value, self.py_types):
+            raise TypeError(f'Expected value of type {self.py_types}, but got {type(value)}')
+        elif not self.primitive_validator(value):
+            raise ValueError('Value outside of type bounds')
 
-        super(Scalar, self).__init__(default_value, settings=settings, *args, **kwargs)
+        super(Scalar, self).validate(value)
 
-    def validate_assignment(self, value):
-        # Try to pack the value. An exception will be raised if the the value is too big.
+    def serialize_into(self, storage: memoryview, offset: int, value, settings: HydraSettings = None) -> int:
+        struct.pack_into(self.get_format_string(settings), storage, offset, value)
+        return offset + self.byte_size
 
-        if isinstance(value, str) or isinstance(value, bytes):
-            return
+    def serialize_many_into(self,
+                            storage: memoryview,
+                            offset: int,
+                            value: List[Any],
+                            min_values_count: int,
+                            settings: HydraSettings) -> int:
+        fmt = self.get_format_string(settings, len(value))
+        struct.pack_into(fmt, storage, offset, *value)
+        return offset + self.byte_size * max(len(value), min_values_count)
 
-        try:
-            struct.pack(self.format_string, value)
-        except struct.error:
-            raise ValueError("Value out of type bounds")
+    def deserialize(self, raw_data, settings: HydraSettings = None):
+        settings = HydraSettings.resolve(settings)
 
-    def format(self, value, settings=None):
-        if isinstance(value, (str, bytes)):
-            if len(value) != len(self):
-                raise ValueError('Got formatted data with invalid length')
-            return value
+        if self.endianness == Endianness.TARGET:
+            endian = settings.target_endian
+        else:
+            endian = self.endianness
 
-        endian = self.resolve_settings(settings)['endian']
-        return struct.pack(endian + self.format_string, value)
+        return struct.unpack(endian.value + self.fmt, raw_data)[0]
 
-    def parse(self, raw_data, settings=None):
-        endian = self.resolve_settings(settings)['endian']
-        return struct.unpack(endian + self.format_string, string2bytes(raw_data))[0]
+    def get_format_string(self, settings: HydraSettings = None, count: int = 1):
+        if self.endianness == Endianness.TARGET:
+            settings = HydraSettings.resolve(settings)
+            endian = settings.target_endian
+        else:
+            endian = self.endianness
 
-    def __len__(self):
-        return len(self.format(0))
+        if count > 1:
+            return endian.value + str(count) + self.fmt
+        return endian.value + self.fmt
 
-
-class UInt8(Scalar):
-    """ An 8 bits long unsigned integer. """
-
-    def __init__(self, *args, **kwargs):
-        super(UInt8, self).__init__('B', *args, **kwargs)
-
-
-class Int8(Scalar):
-    """ An 8 bits long signed integer. """
-
-    def __init__(self, *args, **kwargs):
-        super(Int8, self).__init__('b', *args, **kwargs)
-
-
-class UInt16(Scalar):
-    """ A 16 bits long unsigned integer. """
-
-    def __init__(self, *args, **kwargs):
-        super(UInt16, self).__init__('H', *args, **kwargs)
+    def __repr__(self):
+        value = self.get_initial_value() or ''
+        return f'{get_type_name(self)}({value})'
 
 
-class Int16(Scalar):
-    """ A 16 bits long signed integer. """
+class ByteType(Scalar, fmt='B'):
+    def get_initial_values(self, count):
+        initial_value = self.get_initial_value()
+        if initial_value == 0:
+            return bytearray(count)
+        return bytearray((initial_value, )) * count
 
-    def __init__(self, *args, **kwargs):
-        super(Int16, self).__init__('h', *args, **kwargs)
+    def serialize_many_into(self,
+                            storage: memoryview,
+                            offset: int,
+                            value: List[Any],
+                            min_values_count: int,
+                            settings: HydraSettings) -> int:
+        if not isinstance(value, (bytes, bytearray)):
+            return super().serialize_many_into(storage, offset, value, min_values_count, settings)
+        storage[offset:offset + len(value)] = value
+        return offset + max(len(value), min_values_count)
 
-
-class UInt32(Scalar):
-    """ A 32 bits long unsigned integer. """
-
-    def __init__(self, *args, **kwargs):
-        super(UInt32, self).__init__('I', *args, **kwargs)
-
-
-class Int32(Scalar):
-    """ A 32 bits long signed integer. """
-
-    def __init__(self, *args, **kwargs):
-        super(Int32, self).__init__('i', *args, **kwargs)
-
-
-class UInt64(Scalar):
-    """ A 64 bits long unsigned integer. """
-
-    def __init__(self, *args, **kwargs):
-        super(UInt64, self).__init__('Q', *args, **kwargs)
-
-
-class Int64(Scalar):
-    """ A 64 bits long signed integer. """
-
-    def __init__(self, *args, **kwargs):
-        super(Int64, self).__init__('q', *args, **kwargs)
+# Target endian scalars
+class u8(ByteType, fmt='B', endianness=Endianness.TARGET): pass
+class i8(Scalar, fmt='b', endianness=Endianness.TARGET): pass
+class u16(Scalar, fmt='H', endianness=Endianness.TARGET): pass
+class i16(Scalar, fmt='h', endianness=Endianness.TARGET): pass
+class u32(Scalar, fmt='I', endianness=Endianness.TARGET): pass
+class i32(Scalar, fmt='i', endianness=Endianness.TARGET): pass
+class u64(Scalar, fmt='Q', endianness=Endianness.TARGET): pass
+class i64(Scalar, fmt='q', endianness=Endianness.TARGET): pass
+class f32(Scalar, fmt='f', endianness=Endianness.TARGET): pass
+class f64(Scalar, fmt='d', endianness=Endianness.TARGET): pass
 
 
-class Float(Scalar):
-    """
-    A 32 bits long floating point number.
+# Rename scalars to match stdint.h style typedefs
+uint8_t = u8
+uint16_t = u16
+uint32_t = u32
+uint64_t = u64
+int8_t = i8
+int16_t = i16
+int32_t = i32
+int64_t = i64
+float32_t = f32
+float64_t = f64
 
-    The value will be serialized using the 'IEEE 754 binary32' format
-    """
 
-    def __init__(self, *args, **kwargs):
-        super(Float, self).__init__('f', *args, **kwargs)
+# Big-endian scalars
+class u8_be(ByteType, fmt='B', endianness=Endianness.BIG): pass
+class i8_be(Scalar, fmt='b', endianness=Endianness.BIG): pass
+class u16_be(Scalar, fmt='H', endianness=Endianness.BIG): pass
+class i16_be(Scalar, fmt='h', endianness=Endianness.BIG): pass
+class u32_be(Scalar, fmt='I', endianness=Endianness.BIG): pass
+class i32_be(Scalar, fmt='i', endianness=Endianness.BIG): pass
+class u64_be(Scalar, fmt='Q', endianness=Endianness.BIG): pass
+class i64_be(Scalar, fmt='q', endianness=Endianness.BIG): pass
+class f32_be(Scalar, fmt='f', endianness=Endianness.BIG): pass
+class f64_be(Scalar, fmt='d', endianness=Endianness.BIG): pass
 
 
-class Double(Scalar):
-    """
-    A 64 bits long floating point number.
-
-    The value will be serialized using the 'IEEE 754 binary64' format
-    """
-
-    def __init__(self, *args, **kwargs):
-        super(Double, self).__init__('d', *args, **kwargs)
+# Little-endian scalars
+class u8_le(ByteType, fmt='B', endianness=Endianness.LITTLE): pass
+class i8_le(Scalar, fmt='b', endianness=Endianness.LITTLE): pass
+class u16_le(Scalar, fmt='H', endianness=Endianness.LITTLE): pass
+class i16_le(Scalar, fmt='h', endianness=Endianness.LITTLE): pass
+class u32_le(Scalar, fmt='I', endianness=Endianness.LITTLE): pass
+class i32_le(Scalar, fmt='i', endianness=Endianness.LITTLE): pass
+class u64_le(Scalar, fmt='Q', endianness=Endianness.LITTLE): pass
+class i64_le(Scalar, fmt='q', endianness=Endianness.LITTLE): pass
+class f32_le(Scalar, fmt='f', endianness=  Endianness.LITTLE): pass
+class f64_le(Scalar, fmt='d', endianness=  Endianness.LITTLE): pass

@@ -1,24 +1,24 @@
 #!/usr/bin/env python
 """
-This example shows the usage of the TypedArray class.
+This example shows the usage of the Array class.
 
 :file: arrays.py
 :date: 08/09/2015
 :authors:
-    - Gilad Naaman <gilad.naaman@gmail.com>
+    - Gilad Naaman <gilad@naaman.io>
 """
 from hydras import *
 
 
 class SmallStruct(Struct):
-    member = uint16_t
-    spare = Pad(2)
+    member = u16
+    spare = u8[2]
 
 
 class ThisIsAStruct(Struct):
-    byte_array = Array(8)                  # A byte array with 8 items.
-    int_array = Array(5, int32_t)            # An integer array with 5 items.
-    struct_array = Array(3, SmallStruct)   # An array of 3 struct, each sized 4 bytes.
+    byte_array = u8[8]              # A byte array with 8 items.
+    int_array = i32[5]              # An integer array with 5 items.
+    struct_array = SmallStruct[3]   # An array of 3 struct, each sized 4 bytes.
 
 
 if __name__ == '__main__':

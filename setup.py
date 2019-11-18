@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-from setuptools import setup
+from setuptools import setup, find_packages
 
 with open('README.md', 'r') as f:
-      long_description = f.read()
+    long_description = f.read()
 
 setup(name='Hydras',
-      version='2.0.2',
+      version='3.0.0',
       description='A module for constructions of structured binary packets.',
       author='Gilad Naaman',
       author_email='gilad@naaman.io',
@@ -13,10 +13,14 @@ setup(name='Hydras',
       long_description=long_description,
       long_description_content_type="text/markdown",
       url="https://github.com/Gilnaa/Hydras",
-      packages=['hydras'],
+      packages=find_packages(),
       classifiers=[
-            'Programming Language :: Python :: 2',
-            'Programming Language :: Python :: 3',
-            'License :: OSI Approved :: MIT License',
-            'Operating System :: OS Independent',
-      ])
+          'Programming Language :: Python :: 3',
+          'License :: OSI Approved :: MIT License',
+          'Operating System :: OS Independent',
+      ], install_requires=['pyelftools'],
+      entry_points={
+          'console_scripts': [
+              'd2h = hydras.tools.dwarf2hydra:main'
+          ]
+      })

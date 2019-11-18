@@ -8,10 +8,10 @@ from hydras import *
 # You can inherit from the Struct class to define a description of
 # the memory layout of a structure.
 class StructName(Struct):
-    FieldName = uint32_t        # Unsigned; 4 bytes.
-    AnotherField = uint8_t(87)  # Signed; 1 byte. Default value is 87
-    SpareForAlignment = Pad(3)  # Padding. Translates to zeros.
-    ThirdField = uint64_t       # Signed; 8 bytes.
+    FieldName = u32        # Unsigned; 4 bytes.
+    AnotherField = u8(87)  # Signed; 1 byte. Default value is 87
+    SpareForAlignment = u8[3]  # Padding.
+    ThirdField = u64       # Signed; 8 bytes.
 
 
 if __name__ == '__main__':
