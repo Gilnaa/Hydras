@@ -153,19 +153,6 @@ class f32(Scalar, fmt='f', endianness=Endianness.TARGET): pass
 class f64(Scalar, fmt='d', endianness=Endianness.TARGET): pass
 
 
-# Rename scalars to match stdint.h style typedefs
-uint8_t = u8
-uint16_t = u16
-uint32_t = u32
-uint64_t = u64
-int8_t = i8
-int16_t = i16
-int32_t = i32
-int64_t = i64
-float32_t = f32
-float64_t = f64
-
-
 # Big-endian scalars
 class u8_be(ByteType, fmt='B', endianness=Endianness.BIG): pass
 class i8_be(Scalar, fmt='b', endianness=Endianness.BIG): pass
@@ -188,5 +175,40 @@ class u32_le(Scalar, fmt='I', endianness=Endianness.LITTLE): pass
 class i32_le(Scalar, fmt='i', endianness=Endianness.LITTLE): pass
 class u64_le(Scalar, fmt='Q', endianness=Endianness.LITTLE): pass
 class i64_le(Scalar, fmt='q', endianness=Endianness.LITTLE): pass
-class f32_le(Scalar, fmt='f', endianness=  Endianness.LITTLE): pass
-class f64_le(Scalar, fmt='d', endianness=  Endianness.LITTLE): pass
+class f32_le(Scalar, fmt='f', endianness=Endianness.LITTLE): pass
+class f64_le(Scalar, fmt='d', endianness=Endianness.LITTLE): pass
+
+
+# stdint.h style typedefs
+uint8_t = u8
+uint16_t = u16
+uint32_t = u32
+uint64_t = u64
+int8_t = i8
+int16_t = i16
+int32_t = i32
+int64_t = i64
+float32_t = f32
+float64_t = f64
+
+uint8_t_be = u8_be
+uint16_t_be = u16_be
+uint32_t_be = u32_be
+uint64_t_be = u64_be
+int8_t_be = i8_be
+int16_t_be = i16_be
+int32_t_be = i32_be
+int64_t_be = i64_be
+float32_t_be = f32_be
+float64_t_be = f64_be
+
+uint8_t_le = u8_le
+uint16_t_le = u16_le
+uint32_t_le = u32_le
+uint64_t_le = u64_le
+int8_t_le = i8_le
+int16_t_le = i16_le
+int32_t_le = i32_le
+int64_t_le = i64_le
+float32_t_le = f32_le
+float64_t_le = f64_le

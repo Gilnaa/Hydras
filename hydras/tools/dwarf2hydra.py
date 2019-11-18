@@ -21,10 +21,45 @@ from collections import OrderedDict
 STATE_INITIAL = 0
 STATE_IN_PROCESS = 1
 STATE_FINALIZED = 2
-flatten_arrays = False
 
-autogen_comment = [ '# This struct has been automatically generated, see top of file\n',
-                    '# noinspection PyPep8Naming\n' ]
+autogen_comment = ['# This struct has been automatically generated, see top of file\n',
+                   '# noinspection PyPep8Naming\n']
+
+TYPE_SETS = {
+    'default': {
+        'int': {1: 'i8', 2: 'i16', 4: 'i32', 8: 'i64'},
+        'uint': {1: 'u8', 2: 'u16', 4: 'u32', 8: 'u64'},
+        'float': {4: 'f32', 8: 'f64'}
+    },
+    'default_le': {
+        'int': {1: 'i8_le', 2: 'i16_le', 4: 'i32_le', 8: 'i64_le'},
+        'uint': {1: 'u8_le', 2: 'u16_le', 4: 'u32_le', 8: 'u64_le'},
+        'float': {4: 'f32_le', 8: 'f64_le'}
+    },
+    'default_be': {
+        'int': {1: 'i8_be', 2: 'i16_be', 4: 'i32_be', 8: 'i64_be'},
+        'uint': {1: 'u8_be', 2: 'u16_be', 4: 'u32_be', 8: 'u64_be'},
+        'float': {4: 'f32_be', 8: 'f64_be'}
+    },
+    'cstdint': {
+        'int': {1: 'int8_t', 2: 'int16_t', 4: 'int32_t', 8: 'int64_t'},
+        'uint': {1: 'uint8_t', 2: 'uint16_t', 4: 'uint32_t', 8: 'uint64_t'},
+        'float': {4: 'float32_t', 8: 'float64_t'}
+    },
+    'cstdint_le': {
+        'int': {1: 'int8_t_le', 2: 'int16_t_le', 4: 'int32_t_le', 8: 'int64_t_le'},
+        'uint': {1: 'uint8_t_le', 2: 'uint16_t_le', 4: 'uint32_t_le', 8: 'uint64_t_le'},
+        'float': {4: 'float32_t_le', 8: 'float64_t_le'}
+    },
+    'cstdint_be': {
+        'int': {1: 'int8_t_be', 2: 'int16_t_be', 4: 'int32_t_be', 8: 'int64_t_be'},
+        'uint': {1: 'uint8_t_be', 2: 'uint16_t_be', 4: 'uint32_t_be', 8: 'uint64_t_be'},
+        'float': {4: 'float32_t_be', 8: 'float64_t_be'}
+    },
+}
+
+flatten_arrays = False
+chosen_type_set = None
 
 
 def eprint(*args, **kwargs):
@@ -116,23 +151,20 @@ class Primitive(Type):
         super().__init__(die)
 
         self.name = die.attributes['DW_AT_name'].value.decode('utf-8')
-
         self.byte_size = die.attributes['DW_AT_byte_size'].value
 
     def __repr__(self):
-        return self.name
+        return self.get_hydras_type()
 
     def get_hydras_type(self):
-        if self.name == 'float':
-            return 'f32'
-        elif self.name == 'double':
-            return 'f64'
-
-        bitsize = self.byte_size * 8
-        if 'unsigned' in self.name:
-            return f'u{bitsize}'
+        if self.name in ['float', 'double']:
+            type_set = chosen_type_set['float']
+        elif 'unsigned' in self.name:
+            type_set = chosen_type_set['uint']
         else:
-            return f'i{bitsize}'
+            type_set = chosen_type_set['int']
+
+        return type_set[self.byte_size]
 
     def __eq__(self, other):
         return isinstance(other, Primitive) and \
@@ -201,6 +233,7 @@ class Struct(Type):
     def generate_hydras_definition(self, fp: TextIO):
         padding_counter = 0
         last_ending_offset = 0
+        byte_type = chosen_type_set['uint'][1]
 
         # Adding 2 empty lines in order to comply w/ PEP8
         fp.writelines(autogen_comment)
@@ -209,7 +242,7 @@ class Struct(Type):
         for offset, member_type, member_name in self.members:
             # Generate entries for compiler introduced padding
             if last_ending_offset < offset:
-                fp.write(f'    _padding_{padding_counter} = uint8_t[{offset - last_ending_offset}]\n')
+                fp.write(f'    _padding_{padding_counter} = {byte_type}[{offset - last_ending_offset}]\n')
                 padding_counter += 1
             last_ending_offset = offset + member_type.byte_size
 
@@ -222,7 +255,7 @@ class Struct(Type):
 
         # The compiler can also generate postfix padding.
         if last_ending_offset != self.byte_size:
-            fp.write(f'    _padding_{padding_counter} = uint8_t[{self.byte_size - last_ending_offset}]\n')
+            fp.write(f'    _padding_{padding_counter} = {byte_type}[{self.byte_size - last_ending_offset}]\n')
 
 
 class EnumType(Type):
@@ -380,6 +413,7 @@ class Typedef(Type):
         super().__init__(die)
 
         self.name = die.attributes['DW_AT_name'].value.decode('utf-8')
+        self.category = None
 
         if 'DW_AT_type' in die.attributes:
             self.alias = die.attributes['DW_AT_type'].value
@@ -388,8 +422,10 @@ class Typedef(Type):
             self.alias = None
 
     def do_finalize(self, types, finalization_order):
-        if not self.needs_to_generate_hydra():
-            self.byte_size = int(re.match(r'u?int(8|16|32|64)_t', self.name).group(1)) // 8
+        matches = self._match_primitive_type()
+        if matches:
+            self.byte_size = int(matches.group(2)) // 8
+            self.category = matches.group(1)
         elif self.alias is not None:
             self.alias = types[self.alias]
             self.alias.finalize(types, finalization_order)
@@ -401,20 +437,23 @@ class Typedef(Type):
         return [self.alias]
 
     def get_hydras_type(self):
+        if self._match_primitive_type():
+            return chosen_type_set[self.category][self.byte_size]
+
         return self.name
 
     def __repr__(self):
         return self.name
 
     def __eq__(self, other):
-        if not self.needs_to_generate_hydra():
+        if self._match_primitive_type():
             return isinstance(other, Typedef) and other.name == self.name
 
         return isinstance(other, Typedef) and other.name == self.name and other.alias == self.alias
 
     def needs_to_generate_hydra(self) -> bool:
         # Skip generation of common Hydras typedefs
-        return not bool(re.match(r'u?int(8|16|32|64)_t', self.name))
+        return not bool(self._match_primitive_type())
 
     def generate_hydras_definition(self, fp: TextIO):
         if not self.needs_to_generate_hydra():
@@ -423,6 +462,9 @@ class Typedef(Type):
         if self.alias.is_pointer():
             fp.write(f'# <POINTER> ({repr(self.alias)})\n')
         fp.write(f'{self.name} = {self.alias.get_hydras_type()}\n')
+
+    def _match_primitive_type(self):
+        return re.match(r'(float|u?int)(8|16|32|64)_t', self.name)
 
 
 class Pointer(Type):
@@ -445,8 +487,7 @@ class Pointer(Type):
         return [self.item_type]
 
     def get_hydras_type(self):
-        ptr_type = {4:  'u32', 8: 'u64'}[self.byte_size]
-        return f'{ptr_type}'
+        return chosen_type_set['uint'][self.byte_size]
 
     def is_pointer(self) -> bool:
         return True
@@ -457,7 +498,7 @@ class Pointer(Type):
     def __repr__(self):
         if self.item_type is None:
             return 'void *'
-        return f'{repr(self.item_type)} *'
+        return f'{self.item_type.get_hydras_type()} *'
 
 
 class ConstType(Type):
@@ -636,7 +677,7 @@ def generate_hydra_file(structs, fp: TextIO):
 
 
 def main():
-    global flatten_arrays
+    global flatten_arrays, chosen_type_set
     args = argparse.ArgumentParser(description='Parses an ELF file with DWARF debug symbols and generates Hydra '
                                                'definitions for the selected structs.'
                                                ''
@@ -647,11 +688,15 @@ def main():
                       type=str, action='append', default=[])
     args.add_argument('--flatten-arrays', help='Treat C matrices as long one dimensional arrays.', action='store_true')
     args.add_argument('-o', '--output', help='Name of output file.')
+    args.add_argument('--type-set', help='Choose which type-set to use for primitives',
+                      default='default', choices=TYPE_SETS.keys())
     args = args.parse_args()
 
     whitelist_re = re.compile('|'.join(map('(?:{0})'.format, args.whitelist)))
 
+    chosen_type_set = TYPE_SETS[args.type_set]
     flatten_arrays = args.flatten_arrays
+
     with open(args.input_file, 'rb') as f:
         elf = ELFFile(f)
         if not elf.has_dwarf_info():

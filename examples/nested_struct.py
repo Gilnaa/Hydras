@@ -12,15 +12,15 @@ class Header(Struct):
 
 
 class SyncMessage(Struct):
-    Header = Header(Opcode=1, PayloadLength=0)
+    Header = Header(dict(Opcode=1, PayloadLength=0))
 
 
 class AckMessage(Struct):
-    Header = Header(Opcode=2, PayloadLength=0)
+    Header = Header(dict(Opcode=2, PayloadLength=0))
 
 
 class DataFragmentMessage(Struct):
-    Header = Header(Opcode=3, PayloadLength=1024)
+    Header = Header(dict(Opcode=3, PayloadLength=1024))
     Payload = u8[1024]
 
 
