@@ -618,7 +618,6 @@ class UnsupportedType(Type):
         self.die = die
 
     def do_finalize(self, types, finalization_order):
-        # debug(self.die.tag)
         pass
 
     def get_hydras_type(self):
@@ -649,7 +648,7 @@ def parse_dwarf_info(elf, whitelist_re, skip_duplicated_symbols):
     finalization_order = []
 
     for cu in elf.get_dwarf_info().iter_CUs():
-        # info(f'Processing {_get_cu_name(cu)}')
+        info(f'Processing {_get_cu_name(cu)}')
 
         # First, we must collect all DIEs into this dictionary so that code
         # from here-on-out will be able to index into it.
