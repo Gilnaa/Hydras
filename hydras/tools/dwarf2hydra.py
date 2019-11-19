@@ -12,18 +12,17 @@ import re
 import os
 import sys
 import argparse
+
+from elftools.dwarf.compileunit import CompileUnit
 from elftools.elf.elffile import ELFFile
 from elftools.dwarf.die import DIE
-from typing import TextIO, List
+from typing import TextIO, List, Union
 from collections import OrderedDict
+from enum import IntEnum
 
-# Type States
-STATE_INITIAL = 0
-STATE_IN_PROCESS = 1
-STATE_FINALIZED = 2
 
-autogen_comment = ['# This struct has been automatically generated, see top of file\n',
-                   '# noinspection PyPep8Naming\n']
+autogen_comment = ['# This item has been automatically generated, see top of file',
+                   '# noinspection PyPep8Naming']
 
 TYPE_SETS = {
     'default': {
@@ -90,28 +89,59 @@ def error(*args, **kwargs):
     print('\x1b[0m', file=sys.stderr)
 
 
+class CodeOutput:
+    def __init__(self, fp: TextIO):
+        self.fp = fp
+        self.last_item_was_typedef = False
+
+    def write_struct(self, lines: List[str]):
+        self.fp.write('\n\n')
+        self.last_item_was_typedef = False
+
+        for l in lines:
+            self.fp.write(l)
+            self.fp.write('\n')
+
+    def write_typedef(self, lines: List[str]):
+        if not self.last_item_was_typedef:
+            self.fp.write('\n\n')
+            self.last_item_was_typedef = True
+
+        for l in lines:
+            self.fp.write(l)
+            self.fp.write('\n')
+
+
+class TypeState(IntEnum):
+    INITIAL = 0
+    IN_PROCESS = 1
+    FINALIZED = 2
+    GENERATED = 3
+
+
 class Type(object):
+
     def __init__(self, die: DIE):
         self.source_object = die
         self.name = None
         self.byte_size = None
-        self.state = STATE_INITIAL
+        self.state = TypeState.INITIAL
 
-    def get_type_dependencies(self) -> List[int]:
+    def get_type_dependencies(self) -> Union[List[int], List['Type']]:
         return []
 
     def finalize(self, types, finalization_order):
-        if self.state == STATE_FINALIZED:
+        if self.state == TypeState.FINALIZED:
             return
 
-        if self.state == STATE_IN_PROCESS:
+        if self.state == TypeState.IN_PROCESS:
             raise RuntimeError("Type cycle detected")
 
-        self.state = STATE_IN_PROCESS
+        self.state = TypeState.IN_PROCESS
         self.do_finalize(types, finalization_order)
         if self not in finalization_order:
             finalization_order.append(self)
-        self.state = STATE_FINALIZED
+        self.state = TypeState.FINALIZED
 
     def do_finalize(self, types, finalization_order):
         pass
@@ -132,18 +162,31 @@ class Type(object):
     def get_hydras_type(self):
         pass
 
-    def needs_to_generate_hydra(self) -> bool:
-        return False
-
-    def generate_hydras_definition(self, fp: TextIO):
+    def generate_hydras_definition(self, fp: CodeOutput):
         """
-        Generates top-level definitions for this type if needed.
+        Recursively generate hydras definitions for data types
         :param fp: Output text stream
         """
+        if self.state == TypeState.GENERATED:
+            return
+        else:
+            assert self.state == TypeState.FINALIZED
+
+        dependencies = sorted(self.get_type_dependencies(), key=lambda d: d.get_sorting_key())
+        for dependency in dependencies:
+            dependency.generate_hydras_definition(fp)
+
+        self.do_generate_hydras_definition(fp)
+        self.state = TypeState.GENERATED
+
+    def do_generate_hydras_definition(self, fp: CodeOutput):
         pass
 
     def is_pointer(self) -> bool:
         return False
+
+    def get_sorting_key(self):
+        return self.name
 
 
 class Primitive(Type):
@@ -227,35 +270,34 @@ class Struct(Type):
                other.members == self.members and \
                other.name == self.name
 
-    def needs_to_generate_hydra(self) -> bool:
-        return True
-
-    def generate_hydras_definition(self, fp: TextIO):
+    def do_generate_hydras_definition(self, fp: CodeOutput):
         padding_counter = 0
         last_ending_offset = 0
         byte_type = chosen_type_set['uint'][1]
 
         # Adding 2 empty lines in order to comply w/ PEP8
-        fp.writelines(autogen_comment)
-        fp.write(f'class {self.name}(Struct):\n')
+        struct_lines = autogen_comment.copy()
+        struct_lines.append(f'class {self.name}(Struct):')
 
         for offset, member_type, member_name in self.members:
             # Generate entries for compiler introduced padding
             if last_ending_offset < offset:
-                fp.write(f'    _padding_{padding_counter} = {byte_type}[{offset - last_ending_offset}]\n')
+                struct_lines.append(f'    _padding_{padding_counter} = {byte_type}[{offset - last_ending_offset}]')
                 padding_counter += 1
             last_ending_offset = offset + member_type.byte_size
 
             if member_type.is_pointer():
-                fp.write(f'    # <POINTER> ({repr(member_type)})\n')
+                struct_lines.append(f'    # <POINTER> ({repr(member_type)})')
 
             # Output the member itself
             type_hint = f': List[{member_type.item_type.get_hydras_type()}]' if type(member_type) == Array else ''
-            fp.write(f'    {member_name}{type_hint} = {member_type.get_hydras_type()}\n')
+            struct_lines.append(f'    {member_name}{type_hint} = {member_type.get_hydras_type()}')
 
         # The compiler can also generate postfix padding.
         if last_ending_offset != self.byte_size:
-            fp.write(f'    _padding_{padding_counter} = {byte_type}[{self.byte_size - last_ending_offset}]\n')
+            struct_lines.append(f'    _padding_{padding_counter} = {byte_type}[{self.byte_size - last_ending_offset}]')
+
+        fp.write_struct(struct_lines)
 
 
 class EnumType(Type):
@@ -300,16 +342,15 @@ class EnumType(Type):
                other.item_type == self.item_type and \
                other.literals == self.literals
 
-    def needs_to_generate_hydra(self) -> bool:
-        return True
-
-    def generate_hydras_definition(self, fp: TextIO):
-        # Adding 2 empty lines in order to comply w/ PEP8
-        fp.write(f'class {self.name}(Enum):\n')
+    def do_generate_hydras_definition(self, fp: CodeOutput):
+        enum_lines = autogen_comment.copy()
+        enum_lines.append(f'class {self.name}(Enum):')
 
         for name, value in self.literals.items():
             # Output the member itself
-            fp.write(f'    {name} = {value}\n')
+            enum_lines.append(f'    {name} = {value}')
+
+        fp.write_struct(enum_lines)
 
 
 class UnionType(Type):
@@ -381,7 +422,7 @@ class Array(Type):
         return [self.item_type]
 
     def __repr__(self):
-        if self.state != STATE_FINALIZED:
+        if self.state != TypeState.FINALIZED:
             return "<abstract array type>"
 
         base_type = repr(self.item_type)
@@ -406,6 +447,9 @@ class Array(Type):
 
     def is_pointer(self) -> bool:
         return self.item_type.is_pointer()
+
+    def get_sorting_key(self):
+        return self.item_type.get_sorting_key()
 
 
 class Typedef(Type):
@@ -432,7 +476,7 @@ class Typedef(Type):
             self.byte_size = self.alias.byte_size
 
     def get_type_dependencies(self):
-        if not self.needs_to_generate_hydra():
+        if self._match_primitive_type():
             return []
         return [self.alias]
 
@@ -451,17 +495,15 @@ class Typedef(Type):
 
         return isinstance(other, Typedef) and other.name == self.name and other.alias == self.alias
 
-    def needs_to_generate_hydra(self) -> bool:
-        # Skip generation of common Hydras typedefs
-        return not bool(self._match_primitive_type())
-
-    def generate_hydras_definition(self, fp: TextIO):
-        if not self.needs_to_generate_hydra():
+    def do_generate_hydras_definition(self, fp: CodeOutput):
+        if self._match_primitive_type():
             return
 
+        typedef_lines = []
         if self.alias.is_pointer():
-            fp.write(f'# <POINTER> ({repr(self.alias)})\n')
-        fp.write(f'{self.name} = {self.alias.get_hydras_type()}\n')
+            typedef_lines.append(f'# <POINTER> ({repr(self.alias)})')
+        typedef_lines.append(f'{self.name} = {self.alias.get_hydras_type()}')
+        fp.write_typedef(typedef_lines)
 
     def _match_primitive_type(self):
         return re.match(r'(float|u?int)(8|16|32|64)_t', self.name)
@@ -500,6 +542,9 @@ class Pointer(Type):
             return 'void *'
         return f'{self.item_type.get_hydras_type()} *'
 
+    def get_sorting_key(self):
+        return self.item_type.get_sorting_key()
+
 
 class ConstType(Type):
     def __init__(self, die: DIE):
@@ -533,6 +578,9 @@ class ConstType(Type):
 
     def is_pointer(self) -> bool:
         return self.item_type.is_pointer()
+
+    def get_sorting_key(self):
+        return self.item_type.get_sorting_key()
 
 
 class FunctionPointer(Type):
@@ -592,14 +640,16 @@ TAG_TYPE_MAPPING = {
 
 
 def parse_dwarf_info(elf, whitelist_re, skip_duplicated_symbols):
+    def _get_cu_name(cu: CompileUnit) -> str:
+        return cu.get_top_DIE().attributes['DW_AT_name'].value.decode('utf-8')
+
     # A mapping of `name: type` across all translation units.
     aggregated_types_by_name = {}
     # List of types by finalization order
     finalization_order = []
 
     for cu in elf.get_dwarf_info().iter_CUs():
-        cu_name = cu.get_top_DIE().attributes['DW_AT_name'].value.decode('utf-8')
-        info(f'Processing {cu_name}')
+        # info(f'Processing {_get_cu_name(cu)}')
 
         # First, we must collect all DIEs into this dictionary so that code
         # from here-on-out will be able to index into it.
@@ -630,8 +680,11 @@ def parse_dwarf_info(elf, whitelist_re, skip_duplicated_symbols):
             #  - Parse only once and reuse the same definition.
             if typ.name is not None and typ.name in aggregated_types_by_name:
                 if skip_duplicated_symbols:
+                    debug(f'Replacing offset {offset} with cached type {typ.name}. (OID={id(typ)},NID={id(aggregated_types_by_name[typ.name])})')
                     types[offset] = aggregated_types_by_name[typ.name]
                 else:
+                    # TODO: This implementation is broken because
+                    #       `finalize` still modifies `types` and it can create duplicates.
                     # We still finalize the type so we could check it,
                     # but we provide an empty list for the initialization order
                     # so we could avoid duplicates
@@ -644,8 +697,8 @@ def parse_dwarf_info(elf, whitelist_re, skip_duplicated_symbols):
                         eprint(repr(aggregated_types_by_name))
                         sys.exit(1)
 
-            else:
-                typ.finalize(types, finalization_order)
+        for offset, typ in types.items():
+            typ.finalize(types, finalization_order)
 
         # Update the aggregate
         for typ in types.values():
@@ -654,26 +707,18 @@ def parse_dwarf_info(elf, whitelist_re, skip_duplicated_symbols):
     return finalization_order
 
 
-def generate_hydra_file(structs, fp: TextIO):
-    fp.write('# File was automatically generated using the dwarf2hydra.py tool.\n')
+def generate_hydra_file(structs, whitelist_re, fp: TextIO):
     fp.writelines([
+            '# File was automatically generated using the dwarf2hydra.py tool.\n'
             'from hydras import *\n',
             'from typing import List\n'
         ])
 
-    last_generated_type = None
+    structs = filter(lambda s: s.name is not None and whitelist_re.match(s.name), structs)
+    structs = sorted(structs, key=lambda x: x.name)
+    fp = CodeOutput(fp)
     for struct in structs:
-        if not struct.needs_to_generate_hydra():
-            continue
-
-        # If anything was generated from the last struct, insert 2 line-feeds to conform to PEP8 ...
-        # ... unless both of them are typedefs.
-        if not (isinstance(struct, Typedef) and isinstance(last_generated_type, Typedef)):
-            fp.write('\n\n')
-
         struct.generate_hydras_definition(fp)
-
-        last_generated_type = struct
 
 
 def main():
@@ -707,7 +752,8 @@ def main():
         if args.output is not None:
             output = open(args.output, 'w')
 
-        generate_hydra_file(parse_dwarf_info(elf, whitelist_re, True), output)
+        structs = parse_dwarf_info(elf, whitelist_re, True)
+        generate_hydra_file(structs, whitelist_re, output)
 
 
 if __name__ == '__main__':
