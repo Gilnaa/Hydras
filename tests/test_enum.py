@@ -73,6 +73,12 @@ class EnumClassTests(HydrasTestCase):
         with self.assertRaises(RuntimeError):
             a = Enum()
 
+    def test_literal_hash_smoke_test(self):
+        self.assertEqual(hash(EOpcodeThingie.a),
+                         hash(EOpcodeThingie.a))
+        self.assertNotEqual(hash(EOpcodeThingie.a),
+                            hash(EOpcodeThingie.b))
+
 
 if __name__ == '__main__':
     unittest.main()

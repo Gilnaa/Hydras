@@ -39,6 +39,9 @@ class Literal:
     def __eq__(self, other):
         return int(self) == int(other)
 
+    def __hash__(self):
+        return hash((self.enum, self.literal_name, self.value))
+
 
 class EnumMetadata(SerializerMetadata):
     __slots__ = ('flags', 'serializer', 'literals')
