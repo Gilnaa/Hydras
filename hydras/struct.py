@@ -283,6 +283,27 @@ class Struct(metaclass=StructMeta):
         params = ', '.join(lines)
         return f'{get_type_name(self)}({{{params}}})'
 
+    def render_lines(self, options: RenderOptions = None) -> List[str]:
+        options = options or RenderOptions()
+        lines = [
+            f'{get_type_name(self)} {{'
+        ]
+
+        for name, serializer in self._hydras_members().items():
+            lines.extend(options.indent + sub_line
+                         for sub_line in serializer.render_lines(name,
+                                                                 getattr(self, name),
+                                                                 options))
+
+        lines.append('}')
+        return lines
+
+    def render(self, options: RenderOptions = None) -> str:
+        return '\n'.join(self.render_lines(options))
+
+    def __str__(self):
+        return self.render()
+
 
 class NestedStructMetadata(SerializerMetadata):
     __slots__ = ('struct', )
@@ -343,6 +364,12 @@ class NestedStruct(Serializer, metaclass=NestedStructMeta):
 
     def validate(self, value):
         value.validate()
+
+    def render_lines(self, name: str, value: Struct, options: RenderOptions = None) -> List[str]:
+        lines = value.render_lines(options)
+        if name is not None:
+            lines[0] = f'{name}: {lines[0]}'
+        return lines
 
     def __len__(self):
         return len(self.default_value)

@@ -70,6 +70,16 @@ class HydraSettings:
         return cls.snapshot()
 
 
+class RenderOptions:
+    def __init__(self,
+                 indent='    ',
+                 compact_bytes=False,
+                 hex_integers=False):
+        self.indent = indent
+        self.compact_bytes = compact_bytes
+        self.hex_integers = hex_integers
+
+
 class SerializerMetadata:
     __slots__ = ('size', )
 
@@ -168,6 +178,11 @@ class Serializer(metaclass=SerializerMeta):
     def deserialize(self, raw_data: bytes, settings: HydraSettings = None):
         """ When implemented in derived classes, parses the raw data. """
         raise NotImplementedError()
+
+    def render_lines(self, name, value, options: RenderOptions = None) -> List[str]:
+        if name is None:
+            return [str(value)]
+        return [f'{name}: {str(value)}']  # + str(value).splitlines()
 
     def validate(self, value):
         """

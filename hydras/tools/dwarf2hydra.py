@@ -679,7 +679,8 @@ def parse_dwarf_info(elf, whitelist_re, skip_duplicated_symbols):
             #  - Parse only once and reuse the same definition.
             if typ.name is not None and typ.name in aggregated_types_by_name:
                 if skip_duplicated_symbols:
-                    debug(f'Replacing offset {offset} with cached type {typ.name}. (OID={id(typ)},NID={id(aggregated_types_by_name[typ.name])})')
+                    # debug(f'Replacing offset {offset} with cached type {typ.name}. '
+                    #       f'(OID={id(typ)},NID={id(aggregated_types_by_name[typ.name])})')
                     types[offset] = aggregated_types_by_name[typ.name]
                 else:
                     # TODO: This implementation is broken because

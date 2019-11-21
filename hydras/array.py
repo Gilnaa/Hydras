@@ -12,6 +12,8 @@ from .struct import *
 from .scalars import *
 from .utils import *
 import copy
+import binascii
+import itertools
 
 BYTE_TYPES = (u8, u8_be, u8_le)
 
@@ -66,7 +68,7 @@ class ArrayMeta(SerializerMeta):
         })
 
     def __repr__(cls) -> str:
-        if cls.is_constant_size:
+        if not cls.is_constant_size:
             size = f'{cls.__hydras_metadata__.array_size_min}:{cls.__hydras_metadata__.array_size_max}'
         else:
             size = f'{cls.__hydras_metadata__.array_size_min}'
@@ -170,8 +172,34 @@ class Array(Serializer, metaclass=ArrayMeta):
         return len(value) * self.serializer.byte_size
 
     def __repr__(self) -> str:
-        if self.is_constant_size:
+        if not self.is_constant_size:
             size = f'{self.min_size}:{self.max_size}'
         else:
             size = f'{self.min_size}'
         return f'{self.serializer}[{size}]'
+
+    def render_lines(self, name, value, options: RenderOptions = None) -> List[str]:
+        options = options or RenderOptions()
+        if options.compact_bytes and isinstance(value, (bytes, bytearray)):
+            prefix = f'{name}: ' if name is not None else ''
+            return [f'{prefix}{binascii.hexlify(value)}']
+
+        if name is not None:
+            lines = [f'{name}: {{']
+        else:
+            lines = ['{']
+
+        if options.hex_integers and \
+                isinstance(self.serializer, Scalar) and \
+                float not in self.serializer.py_types:
+            fmt = f'0x{{:0{self.serializer.byte_size * 2}X}}'
+            value = map(fmt.format, value)
+
+        for v in value:
+            cur_lines = [options.indent + l
+                         for l in self.serializer.render_lines(None, v, options)]
+            cur_lines[-1] += ','
+            lines.extend(cur_lines)
+
+        lines.append('}')
+        return lines
