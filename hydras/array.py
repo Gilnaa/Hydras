@@ -185,21 +185,22 @@ class Array(Serializer, metaclass=ArrayMeta):
             return [f'{prefix}{binascii.hexlify(value)}']
 
         if name is not None:
-            lines = [f'{name}: {{']
+            lines = [f'{name}: [ ']
         else:
-            lines = ['{']
-
-        if options.hex_integers and \
-                isinstance(self.serializer, Scalar) and \
-                float not in self.serializer.py_types:
-            fmt = f'0x{{:0{self.serializer.byte_size * 2}X}}'
-            value = map(fmt.format, value)
+            lines = ['[ ']
 
         for v in value:
             cur_lines = [options.indent + l
                          for l in self.serializer.render_lines(None, v, options)]
-            cur_lines[-1] += ','
-            lines.extend(cur_lines)
+            cur_lines[-1] += ', '
+            if not options.no_line_break_in_arrays:
+                lines.extend(cur_lines)
+            else:
+                lines[-1] += cur_lines[0].lstrip()
+                lines.extend(cur_lines[1:])
 
-        lines.append('}')
+        if not options.no_line_break_in_arrays:
+            lines.append(']')
+        else:
+            lines[-1] += ']'
         return lines

@@ -121,6 +121,17 @@ class Scalar(Serializer, metaclass=ScalarMeta):
         value = self.get_initial_value() or ''
         return f'{get_type_name(self)}({value})'
 
+    def render_lines(self, name, value, options: RenderOptions = None) -> List[str]:
+        if options.hex_integers and float not in self.py_types:
+            fmt = f'0x{{:0{self.byte_size * 2}X}}'
+            value = fmt.format(value)
+        else:
+            value = str(value)
+
+        if name is None:
+            return [value]
+        return [f'{name}: {value}']
+
 
 class ByteType(Scalar, fmt='B'):
     def get_initial_values(self, count):

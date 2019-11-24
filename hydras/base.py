@@ -74,10 +74,12 @@ class RenderOptions:
     def __init__(self,
                  indent='    ',
                  compact_bytes=False,
-                 hex_integers=False):
+                 hex_integers=False,
+                 no_line_break_in_arrays=False):
         self.indent = indent
         self.compact_bytes = compact_bytes
         self.hex_integers = hex_integers
+        self.no_line_break_in_arrays = no_line_break_in_arrays
 
 
 class SerializerMetadata:
