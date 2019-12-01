@@ -72,7 +72,6 @@ class Scalar(Serializer, metaclass=ScalarMeta):
         :param endian:          The endian of this formatter.
         """
         super(Scalar, self).__init__(default_value, *args, **kwargs)
-        self._length = len(self.serialize(0))
 
     def validate(self, value):
         if not isinstance(value, self.py_types):
