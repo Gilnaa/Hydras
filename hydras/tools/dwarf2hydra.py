@@ -344,7 +344,7 @@ class EnumType(Type):
 
     def do_generate_hydras_definition(self, fp: CodeOutput):
         enum_lines = autogen_comment.copy()
-        enum_lines.append(f'class {self.name}(Enum):')
+        enum_lines.append(f'class {self.name}(Enum, underlying_type={self.item_type.get_hydras_type()}):')
 
         for name, value in self.literals.items():
             # Output the member itself
