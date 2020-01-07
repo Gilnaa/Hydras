@@ -110,6 +110,9 @@ class SerializerMeta(ABCMeta):
     def byte_size(cls) -> int:
         return cls.__hydras_metadata__.size
 
+    def __len__(self):
+        return self.byte_size
+
     @property
     def __hydras_metadata__(cls) -> SerializerMetadata:
         return getattr(cls, cls.METAATTR)
@@ -129,6 +132,9 @@ class Serializer(metaclass=SerializerMeta):
     @property
     def __hydras_metadata__(self) -> SerializerMetadata:
         return type(self).__hydras_metadata__
+
+    def __len__(self):
+        return self.byte_size
 
     def __init__(self, default_value, validator: Callable[[Any], bool] = None):
         """

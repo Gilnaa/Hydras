@@ -39,6 +39,14 @@ class ComplicatedStruct(Struct):
 class StructTests(HydrasTestCase):
     """ A testcase checking for a few of `Struct`'s features. """
 
+    def test_member_length(self):
+        self.assertEqual(len(SimpleStruct.b_first_variable), 1)
+        self.assertEqual(len(SimpleStruct.a_second_variable), 2)
+        self.assertEqual(len(SimpleStruct.x_third_variable), 1)
+
+        self.assertEqual(len(ComplicatedStruct.other_struct), 1)
+        self.assertEqual(len(ComplicatedStruct.some_field), 12)
+
     def test_serialize_simple(self):
         """ Test serialization of a simple struct. """
         obj = SimpleStruct()
