@@ -111,6 +111,43 @@ class StructTests(HydrasTestCase):
         o = pickle.loads(pickle.dumps(ComplicatedStruct()))
         self.assertEqual(o, ComplicatedStruct())
 
+    def test_mixin(self):
+        class Header(Struct):
+            a = u8
+            b = u16
+
+        class Body(Struct):
+            foo = u8
+            _hdr = Mixin(Header)
+            _hdr2 = Mixin(Header, prefix='h_')
+            bar = u8
+
+        expected_members = [('foo', u8()), ('a', u8()), ('b', u16()), ('h_a', u8()), ('h_b', u16()), ('bar', u8())]
+
+        for actual, expected in zip(Body._hydras_members().items(), expected_members):
+            self.assertEqual(actual[0], expected[0])
+            self.assertTrue(isinstance(actual[1], type(expected[1])))
+
+    def test_mixin_name_clash(self):
+        class Header(Struct):
+            a = u8
+
+        with self.assertRaises(TypeError):
+            class BodyA(Struct):
+                a = u8
+                _hdr = Mixin(Header)
+
+        with self.assertRaises(TypeError):
+            class BodyB(Struct):
+                _hdr = Mixin(Header)
+                a = u8
+
+        with self.assertRaises(TypeError):
+            class BodyC(Struct):
+                b = u8
+                _hdr = Mixin(Header)
+                _hdr2 = Mixin(Header)
+
 
 if __name__ == '__main__':
     unittest.main()

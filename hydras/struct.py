@@ -1,7 +1,7 @@
 from .base import *
 from .utils import *
 
-__all__ = ('Struct', 'NestedStruct')
+__all__ = ('Struct', 'NestedStruct', 'Mixin')
 
 
 class EmptyFieldValueType:
@@ -16,6 +16,12 @@ class StructMetadata(object):
     size = 0
     members: collections.OrderedDict = None
     is_constant_size = True
+
+
+class Mixin:
+    def __init__(self, typ, prefix=''):
+        self.typ = typ
+        self.prefix = prefix
 
 
 class StructMeta(type):
@@ -48,25 +54,28 @@ class StructMeta(type):
                     members[member_name] = formatter
 
             for member_name, value in attributes.items():
-                fmt = None
+                fmt = ()
                 if issubclass(type(value), Serializer):
-                    fmt = value
+                    fmt = [(member_name, value)]
                 elif inspect.isclass(value) and issubclass(value, Serializer):
-                    fmt = value()
+                    fmt = [(member_name, value())]
                 # We want to check if `value` is either a subclass of `Struct` or an instance of such type
                 # but `Struct` is not a valid identifier at this point.
                 elif issubclass(type(value), StructMeta) or issubclass(type(type(value)), StructMeta):
-                    fmt = NestedStruct[value]()
+                    fmt = [(member_name, NestedStruct[value]())]
+                elif isinstance(value, Mixin):
+                    typ = value.typ
+                    fmt = [(value.prefix + _name, _fmt) for _name, _fmt in typ._hydras_members().items()]
 
-                if fmt is not None:
+                for _name, _fmt in fmt:
                     if last_base is not None or last_member is not None:
                         raise TypeError('...')
-                    elif member_name in members:
+                    elif _name in members:
                         raise TypeError('Name-clash detected')
 
-                    if not fmt.is_constant_size:
-                        last_member = fmt
-                    members[member_name] = fmt
+                    if not _fmt.is_constant_size:
+                        last_member = _fmt
+                    members[_name] = _fmt
 
             # Initialize a copy of the data properties.
             metadata = StructMetadata()
