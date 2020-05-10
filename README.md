@@ -211,6 +211,26 @@ Variable-length types (VST) can only be placed as the last member of a struct.
 The most basic variable-length type is a VLA (Variable-length array; seen above).
 A struct whose last member is a VST is also a VST.
 
+### Mixins ###
+With `Mixin`s, you can copy one struct's fields into another, losing the first structs identity.
+You can also prefix the the implanted fields' names with a constant string.
+```python
+class Aggregate(Struct):
+    version = u8
+
+class Struct1(Struct):
+    magic = u32
+    _ag = Mixin(Aggregate)
+
+class Struct2(Struct):
+    magic = u32
+    version = u16
+    _ag = Mixin(Aggregate, prefix='agg_')
+
+assert list(Struct1._hydras_members()) == ['magic', 'version']
+assert list(Struct2._hydras_members()) == ['magic', 'version', 'agg_version']
+``` 
+
 ## Endianness
 
 Integral fields not suffixed with `_be` or `_le` will take the endianness of the "target".

@@ -99,18 +99,25 @@ class EnumMeta(SerializerMeta):
     def __prepare__(cls, bases, **kwargs):
         return collections.OrderedDict()
 
+    def __contains__(cls, item):
+        if isinstance(item, Literal):
+            return item.enum == cls and cls.literals.get(item.literal_name) == item.value
+        elif isinstance(item, int):
+            return item in cls.literals.values()
+        return False
+
     @property
     def literals(cls) -> collections.OrderedDict:
         return cls.__hydras_metadata__.literals
 
-    def __getattr__(self, name):
+    def __getattr__(cls, name):
         # Wrap literals in a `Literal` object
-        if name in self.literals:
-            return Literal(self, name, self.literals[name])
+        if name in cls.literals:
+            return Literal(cls, name, cls.literals[name])
         return super().__getattr__(name)
 
-    def __repr__(self):
-        return get_type_name(self)
+    def __repr__(cls):
+        return get_type_name(cls)
 
 
 class Enum(Serializer, metaclass=EnumMeta):
