@@ -120,14 +120,7 @@ class SerializerMeta(ABCMeta):
 
 class Serializer(metaclass=SerializerMeta):
     """ The base type for Hydra's serializers. """
-
-    @property
-    def is_constant_size(self) -> bool:
-        return self.__hydras_metadata__.is_constant_size()
-
-    @property
-    def byte_size(self) -> int:
-        return self.__hydras_metadata__.size
+    __slots__ = ('byte_size', 'is_constant_size', 'validator', 'default_value')
 
     @property
     def __hydras_metadata__(self) -> SerializerMetadata:
@@ -143,6 +136,8 @@ class Serializer(metaclass=SerializerMeta):
         :param default_value:   The default value of the formatter.
         :param validator:       A callable
         """
+        self.byte_size = self.__hydras_metadata__.size
+        self.is_constant_size = self.__hydras_metadata__.is_constant_size()
         self.validator = validator
         self.default_value = default_value
 

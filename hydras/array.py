@@ -81,6 +81,7 @@ class Array(Serializer, metaclass=ArrayMeta):
 
     The default value's type is a byte (uint8_t), but can subtituted for any Struct or Scalar.
     """
+    __slots__ = ('serializer', 'min_size', 'max_size', 'allowed_py_types')
 
     def __init__(self, default_value=None, *args, **kwargs):
         """
@@ -98,6 +99,15 @@ class Array(Serializer, metaclass=ArrayMeta):
         :param args:            A paramater list to be passed to the base class.
         :param kwargs:          A paramater dict to be passed to the base class.
         """
+        # Caching because calling `__hydras_metadata__` has a non-trivial overhead
+        metadata = self.__hydras_metadata__
+        self.serializer = metadata.serializer
+        self.min_size = metadata.array_size_min
+        self.max_size = metadata.array_size_max
+        self.allowed_py_types = (list, tuple)
+        if isinstance(self.serializer, BYTE_TYPES):
+            self.allowed_py_types += (bytes, bytearray)
+
         if default_value is None:
             default_value = self.serializer.get_initial_values(self.min_size)
         elif isinstance(default_value, (bytes, bytearray)) and not isinstance(self.serializer, BYTE_TYPES):
@@ -106,25 +116,6 @@ class Array(Serializer, metaclass=ArrayMeta):
             raise TypeError('Default value of invalid type', default_value)
 
         super(Array, self).__init__(default_value, *args, **kwargs)
-
-    @property
-    def serializer(self):
-        return self.__hydras_metadata__.serializer
-
-    @property
-    def min_size(self):
-        return self.__hydras_metadata__.array_size_min
-
-    @property
-    def max_size(self):
-        return self.__hydras_metadata__.array_size_max
-
-    @property
-    def allowed_py_types(self):
-        base_list = (list, tuple)
-        if isinstance(self.serializer, BYTE_TYPES):
-            base_list += (bytes, bytearray)
-        return base_list
 
     def serialize_into(self, storage: memoryview, offset: int, value, settings: HydraSettings = None) -> int:
         """ Return a serialized representation of this object. """
@@ -146,6 +137,9 @@ class Array(Serializer, metaclass=ArrayMeta):
         # Skip deserialization when the output is bytes.
         if isinstance(self.default_value, (bytes, bytearray)):
             parsed = type(self.default_value)(raw_data)
+        elif isinstance(self.serializer, Scalar):
+            fmt = self.serializer.get_format_string(settings, len(raw_data) // self.serializer.byte_size)
+            parsed = type(self.default_value)(struct.unpack(fmt, raw_data))
         else:
             parsed = type(self.default_value)(self.serializer.deserialize(raw_data[begin:begin + self.serializer.byte_size], settings)
                                               for begin in range(0, len(raw_data), self.serializer.byte_size))

@@ -46,22 +46,7 @@ class ScalarMeta(SerializerMeta):
 
 class Scalar(Serializer, metaclass=ScalarMeta):
     """ Provides a handy base class for primitive-value formatters. """
-
-    @property
-    def endianness(self) -> Endianness:
-        return self.__hydras_metadata__.endianness
-
-    @property
-    def fmt(self) -> str:
-        return self.__hydras_metadata__.fmt
-
-    @property
-    def py_types(self):
-        return self.__hydras_metadata__.py_types
-
-    @property
-    def primitive_validator(self):
-        return self.__hydras_metadata__.validator
+    __slots__ = ('endianness', 'fmt', 'py_types', 'primitive_validator')
 
     def __init__(self, default_value=0, *args, **kwargs):
         """
@@ -71,6 +56,12 @@ class Scalar(Serializer, metaclass=ScalarMeta):
         :param default_value:   The default value of this formatter.
         :param endian:          The endian of this formatter.
         """
+        metadata = self.__hydras_metadata__
+        self.endianness = metadata.endianness
+        self.fmt = metadata.fmt
+        self.py_types = metadata.py_types
+        self.primitive_validator = metadata.validator
+
         super(Scalar, self).__init__(default_value, *args, **kwargs)
 
     def validate(self, value):

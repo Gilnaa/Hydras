@@ -91,7 +91,11 @@ class EnumMeta(SerializerMeta):
                 del classdict[lit_name]
 
             classdict.update({
-                SerializerMeta.METAATTR: EnumMetadata(literals=literals_dict, underlying=underlying_type)
+                SerializerMeta.METAATTR: EnumMetadata(literals=literals_dict, underlying=underlying_type),
+                'hydras_literal_object_map__': {
+                    value: Literal(mcs, name, value)
+                    for name, value in literals_dict.items()
+                }
             })
 
         return super(EnumMeta, mcs).__new__(mcs, name, bases, classdict)
@@ -121,16 +125,13 @@ class EnumMeta(SerializerMeta):
 
 
 class Enum(Serializer, metaclass=EnumMeta):
-    @property
-    def literals(self) -> collections.OrderedDict:
-        return type(self).literals
-
-    @property
-    def serializer(self) -> Scalar:
-        return self.__hydras_metadata__.serializer
+    __slots__ = ('serializer', 'literals')
 
     """ An enum formatter that can be shared between structs. """
     def __init__(self, default_value=None, *args, **kwargs):
+        self.serializer = self.__hydras_metadata__.serializer
+        self.literals = type(self).literals
+
         if type(self) is Enum:
             raise RuntimeError('Cannot instantiate `Enum` directly. Must subclass it.')
         elif len(self.literals) == 0:
@@ -162,10 +163,11 @@ class Enum(Serializer, metaclass=EnumMeta):
     def deserialize(self, raw_data, settings: HydraSettings = None):
         value = self.serializer.deserialize(raw_data, settings)
 
-        if not self.is_constant_valid(value):
+        lit = self.hydras_literal_object_map__[value]
+        if lit is None:
             raise ValueError('Parsed enum value is unknown: %d' % value)
 
-        return Literal(type(self), self.get_literal_name(value) or '<invalid>', value)
+        return lit
 
     def validate(self, value):
         """ Validate the given enum value. """
@@ -176,11 +178,14 @@ class Enum(Serializer, metaclass=EnumMeta):
 
     def is_constant_valid(self, num):
         """ Determine if the given number is a valid enum literal. """
-        return num in self.literals.values()
+        return num in self.hydras_literal_object_map__
 
     def get_literal_name(self, num):
         """ Get the name of the constant from a number or a Literal object. """
-        return next((n for n, v in self.literals.items() if v == num), None)
+        lit = self.hydras_literal_object_map__.get(num)
+        if lit is not None:
+            return lit.name
+        return None
 
     def get_literal_by_name(self, name):
         return Literal(type(self), name, self.literals[name])
