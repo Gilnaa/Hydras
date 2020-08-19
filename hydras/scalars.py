@@ -37,7 +37,8 @@ class ScalarMetadata(SerializerMetadata):
 class ScalarMeta(SerializerMeta):
     def __new__(mcs, name, bases, classdict, fmt: str = None, endianness: Endianness = Endianness.TARGET):
         if hasattr(sys.modules[__name__], 'Scalar'):
-            classdict[SerializerMeta.METAATTR] = ScalarMetadata(fmt=fmt, endianness=endianness)
+            metadata = ScalarMetadata(fmt=fmt, endianness=endianness)
+            classdict[SerializerMeta.METAATTR] = metadata
         return super(ScalarMeta, mcs).__new__(mcs, name, bases, classdict)
 
     def __repr__(self):
@@ -46,7 +47,8 @@ class ScalarMeta(SerializerMeta):
 
 class Scalar(Serializer, metaclass=ScalarMeta):
     """ Provides a handy base class for primitive-value formatters. """
-    __slots__ = ('endianness', 'fmt', 'py_types', 'primitive_validator')
+    __slots__ = ()
+    _hydras_metadata: ScalarMetadata
 
     def __init__(self, default_value=0, *args, **kwargs):
         """
@@ -56,18 +58,12 @@ class Scalar(Serializer, metaclass=ScalarMeta):
         :param default_value:   The default value of this formatter.
         :param endian:          The endian of this formatter.
         """
-        metadata = self.__hydras_metadata__
-        self.endianness = metadata.endianness
-        self.fmt = metadata.fmt
-        self.py_types = metadata.py_types
-        self.primitive_validator = metadata.validator
-
         super(Scalar, self).__init__(default_value, *args, **kwargs)
 
     def validate(self, value):
-        if not isinstance(value, self.py_types):
-            raise TypeError(f'Expected value of type {self.py_types}, but got {type(value)}')
-        elif not self.primitive_validator(value):
+        if not isinstance(value, self._hydras_metadata.py_types):
+            raise TypeError(f'Expected value of type {self._hydras_metadata.py_types}, but got {type(value)}')
+        elif not self._hydras_metadata.validator(value):
             raise ValueError('Value outside of type bounds')
 
         super(Scalar, self).validate(value)
@@ -89,30 +85,30 @@ class Scalar(Serializer, metaclass=ScalarMeta):
     def deserialize(self, raw_data, settings: HydraSettings = None):
         settings = HydraSettings.resolve(settings)
 
-        if self.endianness == Endianness.TARGET:
+        if self._hydras_metadata.endianness == Endianness.TARGET:
             endian = settings.target_endian
         else:
-            endian = self.endianness
+            endian = self._hydras_metadata.endianness
 
-        return struct.unpack(endian.value + self.fmt, raw_data)[0]
+        return struct.unpack(endian.value + self._hydras_metadata.fmt, raw_data)[0]
 
     def get_format_string(self, settings: HydraSettings = None, count: int = 1):
-        if self.endianness == Endianness.TARGET:
+        if self._hydras_metadata.endianness == Endianness.TARGET:
             settings = HydraSettings.resolve(settings)
             endian = settings.target_endian
         else:
-            endian = self.endianness
+            endian = self._hydras_metadata.endianness
 
         if count > 1:
-            return endian.value + str(count) + self.fmt
-        return endian.value + self.fmt
+            return endian.value + str(count) + self._hydras_metadata.fmt
+        return endian.value + self._hydras_metadata.fmt
 
     def __repr__(self):
         value = self.get_initial_value() or ''
         return f'{get_type_name(self)}({value})'
 
     def render_lines(self, name, value, options: RenderOptions = None) -> List[str]:
-        if options.hex_integers and float not in self.py_types:
+        if options.hex_integers and float not in self._hydras_metadata.py_types:
             fmt = f'0x{{:0{self.byte_size * 2}X}}'
             value = fmt.format(value)
         else:

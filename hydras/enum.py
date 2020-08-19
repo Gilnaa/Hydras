@@ -8,7 +8,6 @@ Contains a more natural enum implementation.
     - Gilad Naaman <gilad@naaman.io>
 """
 
-from enum import auto
 from .base import *
 from .scalars import *
 import collections
@@ -44,13 +43,17 @@ class Literal:
 
 
 class EnumMetadata(SerializerMetadata):
-    __slots__ = ('flags', 'serializer', 'literals')
+    __slots__ = ('flags', 'serializer', 'literals', 'reverse_map')
     _VALID_UNDERLYING_TYPES = (
         u8, u16, u32, u64, i8, i16, i32, i64,
         u8_le, u16_le, u32_le, u64_le, i8_le, i16_le, i32_le, i64_le,
         u8_be, u16_be, u32_be, u64_be, i8_be, i16_be, i32_be, i64_be)
 
-    def __init__(self, *, literals: collections.OrderedDict, underlying: Type['Scalar'], flags: bool = False):
+    def __init__(self, *,
+                 literals: collections.OrderedDict,
+                 reverse_map: Dict,
+                 underlying: Type['Scalar'],
+                 flags: bool = False):
         super().__init__(underlying.byte_size)
 
         if underlying not in self._VALID_UNDERLYING_TYPES:
@@ -65,9 +68,12 @@ class EnumMetadata(SerializerMetadata):
         self.flags = flags
         self.serializer = serializer
         self.literals = literals
+        self.reverse_map = reverse_map
 
 
 class EnumMeta(SerializerMeta):
+    _hydras_metadata: EnumMetadata
+
     def __new__(mcs, name, bases, classdict: collections.OrderedDict, underlying_type=i32):
         if not hasattr(mcs, SerializerMeta.METAATTR):
             literals = (
@@ -90,13 +96,13 @@ class EnumMeta(SerializerMeta):
             for lit_name in literals_dict:
                 del classdict[lit_name]
 
-            classdict.update({
-                SerializerMeta.METAATTR: EnumMetadata(literals=literals_dict, underlying=underlying_type),
-                'hydras_literal_object_map__': {
-                    value: Literal(mcs, name, value)
-                    for name, value in literals_dict.items()
-                }
-            })
+            reverse_map = {
+                value: Literal(mcs, name, value)
+                for name, value in literals_dict.items()
+            }
+            metadata = EnumMetadata(literals=literals_dict, reverse_map=reverse_map, underlying=underlying_type)
+
+            classdict.update({SerializerMeta.METAATTR: metadata})
 
         return super(EnumMeta, mcs).__new__(mcs, name, bases, classdict)
 
@@ -112,12 +118,12 @@ class EnumMeta(SerializerMeta):
 
     @property
     def literals(cls) -> collections.OrderedDict:
-        return cls.__hydras_metadata__.literals
+        return cls._hydras_metadata.literals
 
     def __getattr__(cls, name):
         # Wrap literals in a `Literal` object
-        if name in cls.literals:
-            return Literal(cls, name, cls.literals[name])
+        if name in cls._hydras_metadata.literals:
+            return Literal(cls, name, cls._hydras_metadata.literals[name])
         return super().__getattr__(name)
 
     def __repr__(cls):
@@ -125,23 +131,21 @@ class EnumMeta(SerializerMeta):
 
 
 class Enum(Serializer, metaclass=EnumMeta):
-    __slots__ = ('serializer', 'literals')
+    __slots__ = ()
+    _hydras_metadata: EnumMetadata
 
     """ An enum formatter that can be shared between structs. """
     def __init__(self, default_value=None, *args, **kwargs):
-        self.serializer = self.__hydras_metadata__.serializer
-        self.literals = type(self).literals
-
         if type(self) is Enum:
             raise RuntimeError('Cannot instantiate `Enum` directly. Must subclass it.')
-        elif len(self.literals) == 0:
+        elif len(self._hydras_metadata.literals) == 0:
             raise RuntimeError('Cannot instantiate an empty Enum')
 
         assert default_value is None or isinstance(default_value, (int, Literal))
 
         # Validate the default_value
         if default_value is None:
-            default_value = self.get_literal_by_name(next(iter(self.literals)))
+            default_value = self.get_literal_by_name(next(iter(self._hydras_metadata.literals)))
         elif isinstance(default_value, int):
             if not self.is_constant_valid(default_value):
                 raise ValueError('Literal constant is not included in the enum: %d' % default_value)
@@ -149,7 +153,7 @@ class Enum(Serializer, metaclass=EnumMeta):
         elif isinstance(default_value, Literal):
             if default_value.enum is not type(self) or \
                     not self.is_constant_valid(default_value.value) or \
-                    default_value.literal_name not in self.literals:
+                    default_value.literal_name not in self._hydras_metadata.literals:
                 raise ValueError('Invalid or corrupted literal')
 
         super(Enum, self).__init__(default_value, *args, **kwargs)
@@ -158,12 +162,12 @@ class Enum(Serializer, metaclass=EnumMeta):
         assert (isinstance(value, Literal) and value.enum == type(self)) or \
                (isinstance(value, int) and self.is_constant_valid(value))
 
-        return self.serializer.serialize_into(storage, offset, int(value), settings)
+        return self._hydras_metadata.serializer.serialize_into(storage, offset, int(value), settings)
 
     def deserialize(self, raw_data, settings: HydraSettings = None):
-        value = self.serializer.deserialize(raw_data, settings)
+        value = self._hydras_metadata.serializer.deserialize(raw_data, settings)
 
-        lit = self.hydras_literal_object_map__[value]
+        lit = self._hydras_metadata.reverse_map[value]
         if lit is None:
             raise ValueError('Parsed enum value is unknown: %d' % value)
 
@@ -178,17 +182,17 @@ class Enum(Serializer, metaclass=EnumMeta):
 
     def is_constant_valid(self, num):
         """ Determine if the given number is a valid enum literal. """
-        return num in self.hydras_literal_object_map__
+        return num in self._hydras_metadata.reverse_map
 
     def get_literal_name(self, num):
         """ Get the name of the constant from a number or a Literal object. """
-        lit = self.hydras_literal_object_map__.get(num)
+        lit = self._hydras_metadata.reverse_map.get(num)
         if lit is not None:
             return lit.name
         return None
 
     def get_literal_by_name(self, name):
-        return Literal(type(self), name, self.literals[name])
+        return Literal(type(self), name, self._hydras_metadata.literals[name])
 
     def get_literal_by_value(self, value):
         return Literal(type(self), self.get_literal_name(value), value)
@@ -198,6 +202,6 @@ class Enum(Serializer, metaclass=EnumMeta):
 
     def __repr__(self):
         value = self.get_initial_value()
-        if value.literal_name == next(iter(self.literals.keys())):
+        if value.literal_name == next(iter(self._hydras_metadata.literals.keys())):
             value = ''
         return f'{get_type_name(self)}({value})'

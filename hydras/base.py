@@ -93,7 +93,9 @@ class SerializerMetadata:
 
 
 class SerializerMeta(ABCMeta):
-    METAATTR = '__hydras_metadata'
+    METAATTR = '_hydras_metadata'
+
+    _hydras_metadata: SerializerMetadata
 
     def __getitem__(self, item_count):
         """
@@ -104,27 +106,19 @@ class SerializerMeta(ABCMeta):
 
     @property
     def is_constant_size(cls) -> bool:
-        return cls.__hydras_metadata__.is_constant_size()
+        return cls._hydras_metadata.is_constant_size()
 
     @property
     def byte_size(cls) -> int:
-        return cls.__hydras_metadata__.size
+        return cls._hydras_metadata.size
 
     def __len__(self):
         return self.byte_size
-
-    @property
-    def __hydras_metadata__(cls) -> SerializerMetadata:
-        return getattr(cls, cls.METAATTR)
 
 
 class Serializer(metaclass=SerializerMeta):
     """ The base type for Hydra's serializers. """
     __slots__ = ('byte_size', 'is_constant_size', 'validator', 'default_value')
-
-    @property
-    def __hydras_metadata__(self) -> SerializerMetadata:
-        return type(self).__hydras_metadata__
 
     def __len__(self):
         return self.byte_size
@@ -136,8 +130,8 @@ class Serializer(metaclass=SerializerMeta):
         :param default_value:   The default value of the formatter.
         :param validator:       A callable
         """
-        self.byte_size = self.__hydras_metadata__.size
-        self.is_constant_size = self.__hydras_metadata__.is_constant_size()
+        self.byte_size = self._hydras_metadata.size
+        self.is_constant_size = self._hydras_metadata.is_constant_size()
         self.validator = validator
         self.default_value = default_value
 

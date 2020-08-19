@@ -19,19 +19,24 @@ BYTE_TYPES = (u8, u8_be, u8_le)
 
 
 class ArrayMetadata(SerializerMetadata):
-    __slots__ = ('array_size_min', 'array_size_max', 'serializer')
+    __slots__ = ('array_size_min', 'array_size_max', 'serializer', 'allowed_py_types')
 
     def __init__(self, array_size_min: int, array_size_max: int, serializer: Serializer):
         super().__init__(array_size_min * serializer.byte_size)
         self.array_size_min = array_size_min
         self.array_size_max = array_size_max
         self.serializer = serializer
+        self.allowed_py_types = (list, tuple)
+        if isinstance(serializer, BYTE_TYPES):
+            self.allowed_py_types += (bytes, bytearray)
 
     def is_constant_size(self) -> bool:
         return self.array_size_min == self.array_size_max
 
 
 class ArrayMeta(SerializerMeta):
+    _hydras_metadata: ArrayMetadata
+
     def __getitem__(cls, args):
         is_array_type = (
                 issubclass(cls, Array) and
@@ -68,11 +73,11 @@ class ArrayMeta(SerializerMeta):
         })
 
     def __repr__(cls) -> str:
-        if not cls.is_constant_size:
-            size = f'{cls.__hydras_metadata__.array_size_min}:{cls.__hydras_metadata__.array_size_max}'
+        if not cls._hydras_metadata.is_constant_size():
+            size = f'{cls._hydras_metadata.array_size_min}:{cls._hydras_metadata.array_size_max}'
         else:
-            size = f'{cls.__hydras_metadata__.array_size_min}'
-        return f'{cls.__hydras_metadata__.serializer}[{size}]'
+            size = f'{cls._hydras_metadata.array_size_min}'
+        return f'{cls._hydras_metadata.serializer}[{size}]'
 
 
 class Array(Serializer, metaclass=ArrayMeta):
@@ -81,7 +86,9 @@ class Array(Serializer, metaclass=ArrayMeta):
 
     The default value's type is a byte (uint8_t), but can subtituted for any Struct or Scalar.
     """
-    __slots__ = ('serializer', 'min_size', 'max_size', 'allowed_py_types')
+
+    __slots__ = ()
+    _hydras_metadata: ArrayMetadata
 
     def __init__(self, default_value=None, *args, **kwargs):
         """
@@ -99,20 +106,11 @@ class Array(Serializer, metaclass=ArrayMeta):
         :param args:            A paramater list to be passed to the base class.
         :param kwargs:          A paramater dict to be passed to the base class.
         """
-        # Caching because calling `__hydras_metadata__` has a non-trivial overhead
-        metadata = self.__hydras_metadata__
-        self.serializer = metadata.serializer
-        self.min_size = metadata.array_size_min
-        self.max_size = metadata.array_size_max
-        self.allowed_py_types = (list, tuple)
-        if isinstance(self.serializer, BYTE_TYPES):
-            self.allowed_py_types += (bytes, bytearray)
-
         if default_value is None:
-            default_value = self.serializer.get_initial_values(self.min_size)
-        elif isinstance(default_value, (bytes, bytearray)) and not isinstance(self.serializer, BYTE_TYPES):
+            default_value = self._hydras_metadata.serializer.get_initial_values(self._hydras_metadata.array_size_min)
+        elif isinstance(default_value, (bytes, bytearray)) and not isinstance(self._hydras_metadata.serializer, BYTE_TYPES):
             raise TypeError('Using `bytes` or `bytearray` for an array value is only valid when the item type is `u8`')
-        elif not isinstance(default_value, self.allowed_py_types):
+        elif not isinstance(default_value, self._hydras_metadata.allowed_py_types):
             raise TypeError('Default value of invalid type', default_value)
 
         super(Array, self).__init__(default_value, *args, **kwargs)
@@ -121,56 +119,60 @@ class Array(Serializer, metaclass=ArrayMeta):
         """ Return a serialized representation of this object. """
 
         # TODO: When using a scalar, this function always pads with zeroes, instead of with the default value
-        return self.serializer.serialize_many_into(storage, offset, value, self.min_size, settings)
+        return self._hydras_metadata.serializer.serialize_many_into(storage, offset, value, self._hydras_metadata.array_size_min, settings)
 
     def deserialize(self, raw_data, settings: HydraSettings = None):
-        fmt_size = self.serializer.byte_size
+        fmt_size = self._hydras_metadata.serializer.byte_size
 
-        if self.max_size is not None and \
-                len(raw_data) > self.max_size * fmt_size:
+        if self._hydras_metadata.array_size_max is not None and \
+                len(raw_data) > self._hydras_metadata.array_size_max * fmt_size:
             raise ValueError('Raw data is too long for array.')
-        elif len(raw_data) < self.min_size * fmt_size:
+        elif len(raw_data) < self._hydras_metadata.array_size_min * fmt_size:
             raise ValueError('Raw data is too short for array.')
         elif len(raw_data) % fmt_size != 0:
             raise ValueError('Raw data is not aligned to item size.')
 
         # Skip deserialization when the output is bytes.
+        serializer = self._hydras_metadata.serializer
+        byte_size = serializer.byte_size
+
         if isinstance(self.default_value, (bytes, bytearray)):
             parsed = type(self.default_value)(raw_data)
-        elif isinstance(self.serializer, Scalar):
-            fmt = self.serializer.get_format_string(settings, len(raw_data) // self.serializer.byte_size)
+        elif isinstance(serializer, Scalar):
+            item_count = len(raw_data) // byte_size
+            fmt = serializer.get_format_string(settings, item_count)
             parsed = type(self.default_value)(struct.unpack(fmt, raw_data))
         else:
-            parsed = type(self.default_value)(self.serializer.deserialize(raw_data[begin:begin + self.serializer.byte_size], settings)
-                                              for begin in range(0, len(raw_data), self.serializer.byte_size))
+            parsed = type(self.default_value)(serializer.deserialize(raw_data[begin:begin + byte_size], settings)
+                                              for begin in range(0, len(raw_data), byte_size))
 
         return parsed
 
     def values_equal(self, a, b):
-        return len(a) == len(b) and all(self.serializer.values_equal(ai, bi) for ai, bi in zip(a, b))
+        return len(a) == len(b) and all(self._hydras_metadata.serializer.values_equal(ai, bi) for ai, bi in zip(a, b))
 
     def validate(self, value):
-        if not isinstance(value, self.allowed_py_types):
+        if not isinstance(value, self._hydras_metadata.allowed_py_types):
             raise TypeError('Assigned value must be a tuple or a list.')
 
-        if self.max_size is not None and len(value) > self.max_size:
+        if self._hydras_metadata.array_size_max is not None and len(value) > self._hydras_metadata.array_size_max:
             raise ValueError('Assigned array length is incorrect.')
 
         if not isinstance(value, (bytes, bytearray)):
             for i in value:
-                self.serializer.validate(i)
+                self._hydras_metadata.serializer.validate(i)
 
         super(Array, self).validate(value)
 
     def get_actual_length(self, value):
-        return len(value) * self.serializer.byte_size
+        return len(value) * self._hydras_metadata.serializer.byte_size
 
     def __repr__(self) -> str:
         if not self.is_constant_size:
-            size = f'{self.min_size}:{self.max_size}'
+            size = f'{self._hydras_metadata.array_size_min}:{self._hydras_metadata.array_size_max}'
         else:
-            size = f'{self.min_size}'
-        return f'{self.serializer}[{size}]'
+            size = f'{self._hydras_metadata.array_size_min}'
+        return f'{self._hydras_metadata.serializer}[{size}]'
 
     def render_lines(self, name, value, options: RenderOptions = None) -> List[str]:
         options = options or RenderOptions()
@@ -185,7 +187,7 @@ class Array(Serializer, metaclass=ArrayMeta):
 
         for v in value:
             cur_lines = [options.indent + l
-                         for l in self.serializer.render_lines(None, v, options)]
+                         for l in self._hydras_metadata.serializer.render_lines(None, v, options)]
             cur_lines[-1] += ', '
             if not options.no_line_break_in_arrays:
                 lines.extend(cur_lines)

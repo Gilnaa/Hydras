@@ -25,7 +25,8 @@ class Mixin:
 
 
 class StructMeta(type):
-    HYDRAS_METAATTR = '__hydras_metadata'
+    HYDRAS_METAATTR = '_hydras_metadata'
+    _hydras_metadata: StructMetadata
 
     def __new__(mcs, name, bases, attributes):
         if not hasattr(mcs, mcs.HYDRAS_METAATTR):
@@ -42,13 +43,13 @@ class StructMeta(type):
                 raise TypeError('Multiple inheritance of Hydras structs is prohibited.')
 
             for base in hydras_bases:
-                if last_base is not None and len(base.hydras_members__) > 0:
+                if last_base is not None and len(base._hydras_metadata.members) > 0:
                     raise TypeError('When deriving a variable-length struct, it must be last in the inheritance list')
 
                 if not base.is_constant_size():
                     last_base = base
 
-                for member_name, formatter in base.hydras_members__.items():
+                for member_name, formatter in base._hydras_metadata.members.items():
                     if member_name in members:
                         raise TypeError('Name-clash detected')
                     members[member_name] = formatter
@@ -65,7 +66,7 @@ class StructMeta(type):
                     fmt = [(member_name, NestedStruct[value]())]
                 elif isinstance(value, Mixin):
                     typ = value.typ
-                    fmt = [(value.prefix + _name, _fmt) for _name, _fmt in typ.hydras_members__.items()]
+                    fmt = [(value.prefix + _name, _fmt) for _name, _fmt in typ._hydras_metadata.members.items()]
 
                 for _name, _fmt in fmt:
                     if last_base is not None or last_member is not None:
@@ -86,14 +87,12 @@ class StructMeta(type):
 
             attributes.update({
                 mcs.HYDRAS_METAATTR: metadata,
-                # Avoid prefixing with underscores to avoid Python's name mangling.
-                'hydras_members__': members,
             })
 
         return super(StructMeta, mcs).__new__(mcs, name, bases, attributes)
 
     def __len__(cls):
-        return getattr(cls, cls.HYDRAS_METAATTR).size
+        return cls._hydras_metadata.size
 
     def __prepare__(cls, bases, **kwargs):
         return collections.OrderedDict()
@@ -107,6 +106,7 @@ class StructMeta(type):
 
 class Struct(metaclass=StructMeta):
     """ A base class for the framework's structs. """
+    _hydras_metadata: StructMetadata
 
     def __init__(self, initial_values: dict = None):
         """
@@ -119,7 +119,7 @@ class Struct(metaclass=StructMeta):
         initial_values = initial_values or {}
 
         # Initialize a copy of the data properties.
-        for var_name, var_formatter in self.hydras_members__.items():
+        for var_name, var_formatter in self._hydras_metadata.members.items():
             # Accept a non-default value through the keyword arguments.
             if var_name in initial_values:
                 setattr(self, var_name, initial_values[var_name])
@@ -133,11 +133,11 @@ class Struct(metaclass=StructMeta):
 
     @classmethod
     def _hydras_members(cls) -> collections.OrderedDict:
-        return cls._hydras_metadata().members
+        return cls._hydras_metadata.members
 
     @classmethod
     def is_constant_size(cls):
-        return cls._hydras_metadata().is_constant_size
+        return cls._hydras_metadata.is_constant_size
 
     def serialize(self, settings: HydraSettings = None):
         """
@@ -156,7 +156,7 @@ class Struct(metaclass=StructMeta):
         if not settings.dry_run:
             self.before_serialize()
 
-        for name, formatter in self.hydras_members__.items():
+        for name, formatter in self._hydras_metadata.members.items():
             value = getattr(self, name)
             offset = formatter.serialize_into(storage, offset, value, settings)
 
@@ -180,7 +180,7 @@ class Struct(metaclass=StructMeta):
         if len(raw_data) < len(class_object):
             raise ValueError('The supplied raw data is too short for a struct of type "%s"' % get_type_name(cls))
 
-        for name, serializer in cls.hydras_members__.items():
+        for name, serializer in cls._hydras_metadata.members.items():
             if serializer.is_constant_size:
                 data_piece = raw_data[:serializer.byte_size]
                 raw_data = raw_data[serializer.byte_size:]
@@ -214,7 +214,7 @@ class Struct(metaclass=StructMeta):
 
     def validate(self):
         """ Determine the validity of the object's data. """
-        for field_name, formatter in self.hydras_members__.items():
+        for field_name, formatter in self._hydras_metadata.members.items():
             value = getattr(self, field_name)
             try:
                 formatter.validate(value)
@@ -227,10 +227,10 @@ class Struct(metaclass=StructMeta):
 
     def __len__(self):
         """ Get the length of the struct. """
-        length = self._hydras_metadata().size
+        length = self._hydras_metadata.size
 
         if not self.is_constant_size():
-            name, last_member = next(reversed(self.hydras_members__.items()))
+            name, last_member = next(reversed(self._hydras_metadata.members.items()))
             length -= last_member.byte_size
             length += last_member.get_actual_length(getattr(self, name))
 
@@ -244,7 +244,7 @@ class Struct(metaclass=StructMeta):
         if type(other) != type(self):
             raise TypeError('Cannot equate struct of differing types.')
 
-        for name, formatter in self.hydras_members__.items():
+        for name, formatter in self._hydras_metadata.members.items():
             if not formatter.values_equal(getattr(self, name), getattr(other, name)):
                 return False
 
@@ -256,21 +256,21 @@ class Struct(metaclass=StructMeta):
 
     def __setattr__(self, key, value):
         """ A validation of struct members using the dot-notation. """
-        if HydraSettings.validate and key in self.hydras_members__:
-            self.hydras_members__[key].validate(value)
+        if HydraSettings.validate and key in self._hydras_metadata.members:
+            self._hydras_metadata.members[key].validate(value)
 
         super(Struct, self).__setattr__(key, value)
 
     def __getattribute__(self, key):
         value = super().__getattribute__(key)
         if isinstance(value, EmptyFieldValueType):
-            value = self.hydras_members__[key].get_initial_value()
+            value = self._hydras_metadata.members[key].get_initial_value()
             setattr(self, key, value)
         return value
 
     def __iter__(self):
         """ Support conversion to dict """
-        for key in self.hydras_members__:
+        for key in self._hydras_metadata.members:
             value = getattr(self, key)
             if issubclass(type(value), Struct):
                 yield key, dict(value)
@@ -292,7 +292,7 @@ class Struct(metaclass=StructMeta):
         return create_array(item_count, NestedStruct[self]())
 
     def __repr__(self):
-        lines = (f"'{name}': {repr(getattr(self, name))}" for name in self.hydras_members__)
+        lines = (f"'{name}': {repr(getattr(self, name))}" for name in self._hydras_metadata.members)
         params = ', '.join(lines)
         return f'{get_type_name(self)}({{{params}}})'
 
@@ -302,7 +302,7 @@ class Struct(metaclass=StructMeta):
             f'{get_type_name(self)} {{'
         ]
 
-        for name, serializer in self.hydras_members__.items():
+        for name, serializer in self._hydras_metadata.members.items():
             lines.extend(options.indent + sub_line
                          for sub_line in serializer.render_lines(name,
                                                                  getattr(self, name),
@@ -330,6 +330,8 @@ class NestedStructMetadata(SerializerMetadata):
 
 
 class NestedStructMeta(SerializerMeta):
+    _hydras_metadata: NestedStructMetadata
+
     def __getitem__(cls, struct_type_or_object):
         if not issubclass(get_as_type(struct_type_or_object), Struct):
             raise TypeError("struct_type_or_object should be either a Struct class or a Struct object.")
@@ -341,7 +343,7 @@ class NestedStructMeta(SerializerMeta):
     def __repr__(self):
         # This impl is not accurate and will result in invalid representations,
         # but this will most likely be used for debugging purposes.
-        return f'NestedStruct[{get_type_name(self.__hydras_metadata__.struct)}]'
+        return f'NestedStruct[{get_type_name(self._hydras_metadata.struct)}]'
 
 
 class NestedStruct(Serializer, metaclass=NestedStructMeta):
@@ -350,9 +352,12 @@ class NestedStruct(Serializer, metaclass=NestedStructMeta):
     This is an implementation detail and should not be directly used by the user.
     """
 
+    __slots__ = ()
+    _hydras_metadata: NestedStructMetadata
+
     @property
     def struct(self):
-        return self.__hydras_metadata__.struct
+        return self._hydras_metadata.struct
 
     def __init__(self, *args, **kwargs):
         """
@@ -390,4 +395,4 @@ class NestedStruct(Serializer, metaclass=NestedStructMeta):
     def __repr__(self):
         # This impl is not accurate and will result in invalid representations,
         # but this will most likely be used for debugging purposes.
-        return f'NestedStruct[{get_type_name(self.__hydras_metadata__.struct)}]()'
+        return f'NestedStruct[{get_type_name(self._hydras_metadata.struct)}]()'
