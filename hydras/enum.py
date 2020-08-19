@@ -104,6 +104,12 @@ class EnumMeta(SerializerMeta):
 
             classdict.update({SerializerMeta.METAATTR: metadata})
 
+            # Patch the actual enum type once we get it from super.
+            gen_mcs = super(EnumMeta, mcs).__new__(mcs, name, bases, classdict)
+            for lit in reverse_map.values():
+                lit.enum = gen_mcs
+            return gen_mcs
+
         return super(EnumMeta, mcs).__new__(mcs, name, bases, classdict)
 
     def __prepare__(cls, bases, **kwargs):
