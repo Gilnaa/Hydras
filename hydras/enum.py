@@ -24,8 +24,8 @@ class auto:
 
 
 class Literal:
-    def __init__(self, enum, literal_name, value):
-        self.enum = enum
+    def __init__(self, enum_type, literal_name, value):
+        self.enum = enum_type
         self.literal_name = literal_name
         self.value = value
 
@@ -190,18 +190,21 @@ class Enum(Serializer, metaclass=EnumMeta):
         """ Determine if the given number is a valid enum literal. """
         return num in self._hydras_metadata.reverse_map
 
-    def get_literal_name(self, num):
+    @classmethod
+    def get_literal_name(cls, num):
         """ Get the name of the constant from a number or a Literal object. """
-        lit = self._hydras_metadata.reverse_map.get(num)
+        lit = cls._hydras_metadata.reverse_map.get(num)
         if lit is not None:
-            return lit.name
+            return lit.literal_name
         return None
 
-    def get_literal_by_name(self, name):
-        return Literal(type(self), name, self._hydras_metadata.literals[name])
+    @classmethod
+    def get_literal_by_name(cls, name):
+        return Literal(cls, name, cls._hydras_metadata.literals[name])
 
-    def get_literal_by_value(self, value):
-        return Literal(type(self), self.get_literal_name(value), value)
+    @classmethod
+    def get_literal_by_value(cls, value):
+        return cls._hydras_metadata.reverse_map.get(value)
 
     def values_equal(self, a, b):
         return int(a) == int(b)
