@@ -184,7 +184,7 @@ class Bar(Struct):
 
 if __name__ == '__main__':
     print(Bar.deserialize(b'\x00\x11\x22\x33').byte_array)
-    # => bytearray(b'\x00\x01\x02\x03')
+    # => bytearray(b'\x00\x11\x22\x33')
 ```
 
 Variable-length arrays can be created by giving a slice as the size of the array.
@@ -272,6 +272,8 @@ The user can use a lambda expression (or any function) instead of a validator ob
 class MeIsLambda(Struct):
     member = i8(0, validator=lambda value: value % 3 == 0)
 ```
+
+Note that the default value must pass the validation, otherwise the construction will fail.
 
 ## Hooks
 
