@@ -5,7 +5,7 @@ with open('README.md', 'r') as f:
     long_description = f.read()
 
 setup(name='Hydras',
-      version='3.1.1',
+      version='3.1.2',
       description='A module for constructions of structured binary packets.',
       author='Gilad Naaman',
       author_email='gilad@naaman.io',

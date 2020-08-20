@@ -79,6 +79,14 @@ class EnumClassTests(HydrasTestCase):
         self.assertNotEqual(hash(EOpcodeThingie.a),
                             hash(EOpcodeThingie.b))
 
+    def test_int_construction(self):
+        val = int(EOpcodeThingie.a)
+        fmt = EOpcodeThingie(val)
+        lit = fmt.get_literal_by_value(val)
+        lit_ty = EOpcodeThingie.get_literal_by_value(val)
+        self.assertEqual(lit, EOpcodeThingie.a)
+        self.assertEqual(lit_ty, EOpcodeThingie.a)
+
 
 if __name__ == '__main__':
     unittest.main()
